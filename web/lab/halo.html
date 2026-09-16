@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лаборатория переливов</title>
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/tokens.css">
+<style>
+  /* Страница-стенд: знак и заставка темы с разными узорами перелива рядом, чтобы выбрать глазами.
+     Стили сайта (app.css) НЕ подключены нарочно: там `.logo:hover i{animation…}` спорил бы с живым
+     переливом. Здесь только раскладка и шрифты знака — те же, что в шапке. */
+  body{margin:0;background:var(--ground);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 24px 60px}
+  h1{font-family:var(--serif,"PT Serif",serif);font-size:26px;margin:0 0 4px}
+  .lead{color:var(--ink-dim);margin:0 0 18px;max-width:78ch}
+  .bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:12px 14px;border:1px solid var(--line);
+    border-radius:12px;background:var(--surface);margin-bottom:18px;font-family:var(--mono,"PT Mono",monospace);font-size:12px}
+  .bar label{display:inline-flex;align-items:center;gap:7px;color:var(--ink-dim)}
+  .bar select,.bar input[type=range]{font:inherit;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+  .bar button{font:inherit;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:8px;padding:5px 10px;cursor:pointer}
+  .bar button:hover{background:var(--accent-fill);color:var(--accent-ink)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px}
+  .tile{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:14px 16px 12px;display:flex;flex-direction:column;gap:8px;position:relative}
+  .tile.now{border-color:color-mix(in srgb,var(--accent) 60%,var(--line))}
+  .tile h3{margin:0;font-size:15px;font-family:var(--serif,"PT Serif",serif);display:flex;align-items:baseline;gap:8px}
+  .tile h3 small{font-family:var(--mono,"PT Mono",monospace);font-size:10.5px;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+  .tile .note{margin:0;color:var(--ink-dim);font-size:12.5px;min-height:2.6em}
+  /* знак — как в шапке, только крупнее: зверь 5.5 px, надпись 15 px (то же отношение 2.75) */
+  .lab-logo{display:flex;align-items:center;gap:14px;padding:14px 4px 10px;overflow:hidden;
+    font-family:ui-monospace,Menlo,Consolas,"DejaVu Sans Mono",monospace;font-weight:500;line-height:1;color:var(--ink);cursor:default}
+  .lab-logo i{font-style:normal}
+  .logo-mark{display:block;white-space:pre;font-size:5.5px;flex:none}
+  .logo-row{display:block;white-space:pre}
+  .logo-nose{display:inline-block}
+  .lab-word{display:block;white-space:pre;font-size:15px}
+  .lab-scene{margin:0;height:110px;overflow:hidden;font-family:var(--mono,"PT Mono",monospace);white-space:pre;line-height:1.05;
+    font-size:6px;font-weight:500;color:var(--accent);border-top:1px solid var(--line-soft);padding-top:6px}
+  .lab-scene[hidden]{display:none}
+  .fx-row{display:block}
+  .cfg{font-family:var(--mono,"PT Mono",monospace);font-size:10.5px;color:var(--ink-faint);margin:0;user-select:all;
+    white-space:pre-wrap;word-break:break-all}
+  .tile .again{position:absolute;right:12px;top:12px;font:11px var(--mono,"PT Mono",monospace);color:var(--ink-faint);
+    background:transparent;border:1px solid var(--line);border-radius:99px;padding:2px 9px;cursor:pointer}
+  .tile .again:hover{color:var(--accent);border-color:var(--accent)}
+  .foot{margin-top:22px;color:var(--ink-faint);font-size:12.5px;max-width:80ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Лаборатория переливов</h1>
+  <p class="lead">Один и тот же знак под одиннадцатью узорами перелива. Палитра и цель воздействия общие для всех
+    плиток — переключайте наверху; «Заставка» показывает под знаком сцену определения темы с тем же узором.
+    Под каждой плиткой — строка конфига, которой вариант закрепляется на сайте.</p>
+  <div class="bar" id="bar">
+    <label>палитра <select id="palette"></select></label>
+    <label>цель <select id="target"></select></label>
+    <label>период <input id="period" type="range" min="1.5" max="6" step="0.5" value="3"> <span id="period-v">3 с</span></label>
+    <label><input id="scene" type="checkbox"> заставка</label>
+    <label><input id="hover" type="checkbox"> только при наведении</label>
+    <button id="reshuffle" type="button">перемешать «случайно»</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p class="foot">Узоры без времени (все, кроме «Облаков») сайт умеет гнать чистым CSS — фаза символа становится
+    отрицательной задержкой анимации, как сейчас у вертушки; «Облака» и «Символы» требуют
+    живого пересчёта и включаются только на наведении.</p>
+</div>
+<script type="module" src="/lab/halo.js"></script>
+</body>
+</html>

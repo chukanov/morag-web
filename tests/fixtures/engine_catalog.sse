@@ -1,0 +1,565 @@
+data: {"event": {"type": "status", "data": {"description": "\ud83d\udccb \u0447\u0438\u0442\u0430\u044e \u043a\u0430\u0442\u0430\u043b\u043e\u0433 \u043a\u043e\u0440\u043f\u0443\u0441\u0430", "done": false}}}
+
+data: {"event": {"type": "status", "data": {"description": "\u2192 \u041a\u0430\u0442\u0430\u043b\u043e\u0433 \u043a\u043e\u0440\u043f\u0443\u0441\u0430 \u2014 54 \u0437\u0430\u043f\u0438\u0441\u0435\u0439", "done": false}}}
+
+data: {"event": {"type": "status", "data": {"description": "\u2705 \u041e\u0442\u0432\u0435\u0442 \u043f\u043e \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u0443 \u043a\u043e\u0440\u043f\u0443\u0441\u0430", "done": true}}}
+
+data: {"id": "morag-audio-e0c03211-e840-4dba-b3d9-6d26a1c99252", "object": "chat.completion.chunk", "created": 1784962422, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0412"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bb0c6363-8b4b-41e1-9681-54a02cd5816b", "object": "chat.completion.chunk", "created": 1784962422, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432\u044b\u043f\u0443\u0441"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9d5387cc-073a-4268-9ab2-7c7e88bea6eb", "object": "chat.completion.chunk", "created": 1784962422, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043a\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ef5b837c-4faf-4a1c-affb-483604efb7a9", "object": "chat.completion.chunk", "created": 1784962422, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u2116"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-97c9728a-c461-4da1-bc1f-c4d6c990cf48", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "9"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-23a2e383-72d7-43f0-a225-73f01e4f6d71", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043f\u0435\u0440\u0432\u043e\u0433\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-49bec9ee-30da-45f8-a36a-c1cb15e0ecf4", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0435\u0437\u043e\u043d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9e66ad28-bd13-4c40-9f85-9867aa8d62d6", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0433"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e085fc95-117b-4764-a777-b754bd55934d", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0441\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-7a92097b-5669-4d15-b1eb-10e04ec81efc", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e9c11dc5-c4dd-4e8e-bd4b-060c1441c14e", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0431\u044b\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-65607b47-3521-4ce7-9d1d-60cb114620e8", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " **"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-dee3d575-71e5-4d65-be7a-d1b17e3166ce", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0418"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3276c217-401b-4c3c-b276-10212ee2b817", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0432\u0430\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5ae5a0d9-9c41-4a0a-bbd5-9e215b4a25cd", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041a\u043e\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-82a7618a-9e53-4d98-b159-018ba2703805", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4f501fea-3442-44c9-b642-fa0ba5a5edd5", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-df7a1002-42e4-4382-af07-c7c2003c7650", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "**."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b708fb8b-f452-4b72-b483-4bb357e0cf5e", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\n\n"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4283afa5-6187-4790-80eb-ebd1b0725cc3", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0412"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b2206176-3764-4986-b193-99df716e9d69", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043f\u043e\u0434"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5859365b-3c1a-4cb0-a694-397949cfb7f2", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043a\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9e4332dd-e92b-4be4-afa7-b86a5f06c511", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0441\u0442\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3aad3d1c-2ec6-4387-88e4-814ae7305e02", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0431\u0441\u0443\u0436"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c1a6324d-f570-4436-adc9-cb9df4912c0e", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0434\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1720f15b-ad2f-431d-82a9-0b8936bfe5c6", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043b\u0438\u0441\u044c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ab1961bd-9b68-40a0-bfe0-9cf750bb1e85", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u0440\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ab849197-1bd3-44c8-ad5c-ce30f8110e7d", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043a\u043b\u044e\u0447"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5f86d472-cc1d-4803-8014-5fd365c4e692", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5fad5807-ae98-4d73-a235-b69fc671a80f", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u044b\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e6ffb201-3a43-4c2d-93ad-eed882e7ece7", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u0435\u043c\u044b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8258e95c-e48b-4355-ac7e-01ab5f7f5729", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ":"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-134e6cbd-457b-4b33-ae85-96b6e81a52d2", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0446\u0438\u043a\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3be5d7b0-4c62-4608-ab1c-5a778251bf21", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-54dbc694-fc9f-4ba6-9f66-c589eef91cd5", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0439"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1a1963fe-c609-4fc6-b421-62e54fe4f1f5", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043f\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-0dd351ff-d1fb-41ce-9d7a-e0f878c0b94c", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-2317f4bc-8dea-4a94-9324-f788e072f49f", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " G"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-7dd4fef7-1bee-4033-a80a-6dba9e1e6107", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "artner"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ce9d0843-8b19-46d3-94aa-1e9264d76cbf", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3f946d66-5562-49c6-823f-eb59144da886", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0440\u0435\u0430\u043a\u0446\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4795b60a-4c28-4b2a-bd5b-338630b42b65", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0440\u044b\u043d\u043a\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8c315b93-e8d3-4d1c-9390-617851e709f7", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d9b2e230-e100-4d4c-b70b-8c495e436d09", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5febb0ba-03f6-4b64-8398-7b999cf36f29", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041c\u0430\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b2735deb-0965-4766-a5af-18f75da7531a", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043a\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4b9686a9-a014-453b-802b-205c5958b8f9", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0426"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1d66acf6-9799-4c13-bbf3-ff1e178d4f85", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0443\u043a"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-83d23bc7-ad3f-46e1-8255-86338c4a6c4c", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6d946238-25f6-4d8f-a870-1591a340bfe2", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0431\u0435\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-63659bc7-17f2-4de5-8905-d13302bbb8a5", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0433\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-617bca0e-4fa4-44a4-bdb2-47f393db4ab1", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-82bacb3e-fac8-4df5-a611-58a9f30b902c", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0431\u043b\u043e\u043a\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b67860ea-55a3-4007-a302-6873bd9e8e5c", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440\u043e\u0432\u043a\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1d5b5c55-4b24-4314-8b1f-ffd9565e02db", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " GitHub"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5f5a3d47-71eb-467c-a45e-a884694305a4", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " Cop"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6f75a1b3-05a8-41d3-ada7-3e878ddbf21b", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "ilot"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-fc556dc2-9427-436a-a6d8-f496534488eb", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1659ce4b-553c-4899-acb1-20c6be8b3a47", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " GitHub"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-842fafaa-823d-41b8-aecf-0bcf1d62f054", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-149233ba-46f2-4927-b810-9842cb2185a4", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\n\n"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f0dce61f-52e9-41dd-8fdb-bb83a9176e0e", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0412"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6199f87e-b96b-4db5-b0ed-0626f7148fd4", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-64305c17-53c5-4d8e-b02d-5115c74e7d16", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u043d\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-251c74dd-3901-46af-85ef-4d63783dba3f", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0438\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-2a1bb03c-4649-4704-8f97-3075a941209f", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041c\u0430\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8748b8b4-ffe8-4b3e-a121-19c480459241", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u044b\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-92af56b0-8bcb-442d-9bf3-7e7e2821f6cb", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-80c26b12-e5b2-4e12-b6f4-ffba92d3d703", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0414\u043c\u0438\u0442\u0440\u0438\u0439"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c0c21ed4-297b-49e7-802f-476c1f0a91cb", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041a\u043e\u043b\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-cbcb602d-fdd4-4d5a-a74b-3955bc74b565", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0434\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4f8cdec3-1df8-459c-991e-465b8faac197", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0437"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c88a1dd6-da95-4724-80fb-191add8fecd1", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9e7473a7-89dd-4d07-a212-e1f050b43655", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4f1f713f-fb60-4cf0-877a-47f6ff7dec7b", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432\u043c\u0435\u0441\u0442\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-94dd3911-6b23-4356-9f76-2f2522819f37", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9ecba508-18ab-4e6b-b545-7ade9219f2d9", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0418\u0432\u0430\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e52d7ada-c870-4b76-b17b-237859c98d28", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1bf4ca14-a773-4e91-bc2c-002afd311539", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041a\u043e\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-179a89d5-8cb7-41eb-8cf8-45b13e249096", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-502fc0aa-ad55-4e61-adc1-715bedafd0b9", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-217de790-a996-4139-b89a-9c5cdf5fda88", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u044b\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3df2321b-d560-40c0-a981-ce64181898cc", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-06eb30d8-0b60-4e9d-ae93-cb56899d6258", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0440\u0430\u0437"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-20085a10-18d1-43ab-b989-2f3eab482a60", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0431\u0440\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8d6c00e4-f0f3-48c0-9338-c672434e0364", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043b\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-68dd9fbc-4b75-44d6-9b46-061937d78fed", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c08b467e-cb1a-4761-a717-44806fc4f528", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043a\u0430\u043a"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-0f51fbdc-6b28-4916-b77b-6006137001b3", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d7a52776-9ec0-426c-a064-807c6ab144ce", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0434"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1c4dc928-b671-4f89-bd12-b090a19b576e", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0443\u0441\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d39c3d0a-818d-4fcf-8e52-01fcae36b924", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6603403b-c0c2-473a-9149-ec514b9ce223", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0440\u0435\u0430\u0433\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-7340c2f8-f7f1-476d-a99d-484021629ca2", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440\u0443\u0435\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-7c6763b6-d0be-4837-8ca2-4f86076a9348", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-25a35ffd-397e-4fc5-a188-7037744075b5", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u043e\u0432\u043e\u0441\u0442\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-42c43972-97b9-4339-896c-de60a86cce74", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-45e01d17-6bb2-4823-8969-86acad4c371b", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041c\u0430\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6b7728d7-e274-4840-9881-3fb81d6b70f4", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u044b\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5ef29e17-15c8-404d-bc7e-e990d1577767", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0431\u0440\u0430\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d81d64b0-f800-49c5-aae5-56b5236923df", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0438\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-7478c498-3311-4835-aaac-926aadeb7a5c", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-776d9e40-c468-4df6-9d2b-d1ea937b64f9", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-970229eb-193e-4c86-aa87-05ae33123f52", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4391805f-f057-4c60-a021-a8962749a674", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4dca7729-6345-4583-83bb-f08f5281d9d7", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0447\u0442\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5b2370fc-5133-47a6-9c6c-1c99fbcffc99", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c90600ff-5be8-46d2-ad2e-78fc59fa8c9c", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " G"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-933f7bc5-ae7a-476c-9453-fb8b20b2a447", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "artner"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-97220983-2835-4fc6-9fff-ad5306d6ea4b", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u043d\u043e\u0432\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-71cffa54-a67e-42c6-9a18-e6cf02377176", "object": "chat.completion.chunk", "created": 1784962423, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u043a\u0430\u0437\u0430\u043b\u0430\u0441\u044c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ec7adfb9-1fa4-43a1-a1b5-534ab75d2ca8", "object": "chat.completion.chunk", "created": 1784962424, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6377e841-75a6-4fd3-b7d0-5862e21e7b8f", "object": "chat.completion.chunk", "created": 1784962424, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0446\u0435\u043d\u0442\u0440\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e13e2f69-0e7c-4d9f-a575-2bb5638be12f", "object": "chat.completion.chunk", "created": 1784962424, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f, \u043e\u043f\u0438\u0441"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-187b503a-44c0-4b6c-8049-2851f31c57d9", "object": "chat.completion.chunk", "created": 1784962424, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0432 \u0435\u0451 \u043e\u0442\u0447\u0435\u0442\u044b \u043a\u0430\u043a \u043a\u043b\u0430\u0441\u0441\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043f\u0440\u0438\u043c\u0435\u0440 \u0446\u0438\u043a\u043b\u0430 \u0445\u0430\u0439\u043f\u0430, \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u0447\u0430\u0441\u0442\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-56b25d0f-469c-4619-86a3-76567dcd0ad5", "object": "chat.completion.chunk", "created": 1784962424, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-915a5e42-74f9-4206-a3e5-8c595de3accc", "object": "chat.completion.chunk", "created": 1784962425, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0432\u043e\u0434\u0438\u0442 \u0432 \u0437\u0430\u0431\u043b\u0443\u0436\u0434\u0435\u043d\u0438\u0435 \u0438\u043d\u0432\u0435\u0441\u0442\u043e\u0440\u043e\u0432 \u0438 \u043a\u043e\u0440\u043f\u043e\u0440\u0430\u0446\u0438\u0438. \u041a\u043e\u043b\u043e\u0434\u0435\u0437\u0435\u0432 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u0430\u043b \u044d\u0442\u0443 \u043c\u044b\u0441\u043b\u044c, \u043e\u0442\u043c\u0435\u0442\u0438\u0432, \u0447\u0442\u043e \u0442\u0430\u043a\u0438\u0435 \u043e\u0442\u0447\u0435\u0442\u044b \u0441\u043e\u0437\u0434\u0430\u044e\u0442 \u0438\u0441\u043a\u0443\u0441\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0430\u0436\u0438\u043e\u0442\u0430\u0436, \u0437\u0430\u0441\u0442\u0430\u0432\u043b\u044f\u044f \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u0438 \u0433\u043d\u0430\u0442\u044c\u0441\u044f \u0437\u0430 \u0442\u0440\u0435\u043d\u0434\u0430\u043c\u0438, \u043a\u043e\u0442\u043e\u0440\u044b\u0435 \u0435\u0449\u0435 \u043d\u0435 \u0441\u0442\u0430\u043b\u0438 \u0440\u0435\u0430\u043b\u044c\u043d\u043e\u0441\u0442\u044c\u044e.\n\n\u0427\u0442\u043e \u043a\u0430\u0441\u0430\u0435\u0442\u0441\u044f \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u044f \u041c\u0430\u0440\u043a\u0430 \u0426\u0443\u043a\u0435\u0440\u0431\u0435\u0440\u0433\u0430, \u0442\u043e \u0433\u043e\u0441\u0442\u0438 \u0441\u043e\u0448\u043b\u0438\u0441\u044c \u0432\u043e \u043c\u043d\u0435\u043d\u0438\u0438, \u0447\u0442\u043e \u0440\u044b\u043d\u043e\u043a \u043e\u0442\u0440\u0435\u0430\u0433\u0438\u0440\u043e\u0432\u0430\u043b \u043d\u0430 \u043d\u0435\u0433\u043e \u043d\u0435\u0433\u0430\u0442\u0438\u0432\u043d\u043e \u2014 \u00ab\u043e\u0442 \u0426\u0443\u043a\u0435\u0440\u0431\u0435\u0440\u0433\u0430 \u0440\u0430\u0437\u0431\u0435\u0433\u0430\u044e\u0442\u0441\u044f \u043b\u044e\u0434\u0438\u00bb. \u041c\u0430\u043b\u044b\u0445 \u0438 \u041a\u043e\u043b\u043e\u0434\u0435\u0437\u0435\u0432 \u043f\u0440\u0435\u0434\u043f\u043e\u043b\u043e\u0436\u0438\u043b\u0438,"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4f45bae2-0215-45ff-8ce4-52bebd77d47f", "object": "chat.completion.chunk", "created": 1784962425, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0447\u0442\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5176bfbe-5245-4f7f-8542-2f6db728183a", "object": "chat.completion.chunk", "created": 1784962425, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438\u043d\u0432\u0435\u0441\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-14e3a53b-64b0-411f-ac09-416d7222dff0", "object": "chat.completion.chunk", "created": 1784962425, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0440\u044b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-341b8a69-a678-4eab-b8c9-1cf1bd7a02cd", "object": "chat.completion.chunk", "created": 1784962425, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0443"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6cccde92-b231-44bd-a02e-3d2cea4fe2d8", "object": "chat.completion.chunk", "created": 1784962425, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0441\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-00759bc3-dc6a-4db8-b181-20e1730ed185", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u043b\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ec881b95-0bef-4f21-a1b8-a0d7d9e640f8", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b4548b8f-1eb7-4549-9e86-8d4e8abe368d", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0431"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-968cc920-a0c7-4cc2-a522-5f1e8365b151", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u0449"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-de34b6c8-03eb-4e8e-8277-186a17a437be", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u043d\u0438\u0439"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-21f315c6-8f43-4152-9442-68ef23639293", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " Meta"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c09ba5f8-6b23-416c-8e9f-cacde27d1c40", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-84387033-7525-455e-bcf4-6041aaf31cf4", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0444\u0435\u0440\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bdbcf810-af87-4862-8fc8-a06b185c25dc", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043c\u0435\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-640a1d26-fd45-4f42-8783-b624b9e4d8c8", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-96144bca-f142-4395-b403-ab933a42992b", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0441\u0435\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e98afd6c-9435-4809-a932-9485bcd9d952", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3d2ca033-8782-49cf-b37e-b26ca3802f68", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043d\u044b\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f7bdd7da-f326-4efe-99c5-56854c880e06", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-74586082-d7e2-4ddd-8836-51c02a06b28e", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6e81901f-9622-473c-a729-629616212b9b", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0435\u0442\u0435\u0439"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-63920cc8-5932-421a-b819-c728f2636297", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-db68146d-ac74-4e31-8a65-dde0a5a438df", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d78e3d86-06ad-4b7b-8db4-5a25d9d739a6", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u0435\u043f\u0435\u0440\u044c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d729450b-98ef-4a35-83c2-525b1c78c01a", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9eb7c4fe-e37d-468f-99a8-896abc1fdbd6", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0449"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c6d2c904-c2f8-4105-b0de-2bb57ff17c94", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0443\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f5a89e46-3f74-4f31-b14a-b2da129d4e61", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0431\u043e\u043b\u0435\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-47d9a3e9-40c5-486c-bd5c-d0564c2cc967", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043a\u043e\u043d\u043a\u0440\u0435\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e0ff8003-7be1-4b2e-8724-af25dd61d9c2", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043d\u044b\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-59189c91-b1b5-4add-8422-73b7746dffff", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0434\u043e\u043a\u0430\u0437\u0430\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-59044aaa-b0e6-4923-9624-33b30f9fea53", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u044d\u0444\u0444\u0435\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-fa681a44-ef61-45b2-8c21-be00d7732e8f", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438\u043d\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u0439"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-95049e49-0485-4d1a-b6fd-f946a2b8b8b2", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-67ae4cee-22a0-45f3-81f4-0ff693d4afca", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0418"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b7410fec-a8bc-4c18-834c-70699c3b6fa3", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0418"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8eebfeff-9aca-45e5-8926-84580774b63a", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-163e8cf0-35f2-4f58-8aba-955d57e0b26d", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0418\u0432\u0430\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-667788f2-072d-44eb-87c3-823095b052e3", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041a\u043e\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-afa21871-a44e-4f4b-a9a7-d775d463782e", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e7ad0766-b72a-455d-971c-f401ce3ae3b3", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-dc6f93df-6ca1-4467-98c9-63feb33dcab9", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0434\u043e\u0431\u0430\u0432\u0438\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4eeb279f-1810-47ee-8037-21352e5efa92", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b6356961-f0b5-4a94-9561-02916ace1dc4", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0447\u0442\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c161798d-572d-4456-aa83-0e99f5678c79", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u0430\u043a\u043e\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bb2ea659-5c40-4435-ac09-f1463a9d54a9", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043f\u043e\u0432\u0435\u0434\u0435\u043d\u0438\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4cb35d0d-7251-417f-b42c-e4f095b7a21c", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0440\u044b\u043d\u043a\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f58057f8-0cb1-48ec-b4fb-4997232a139d", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043c\u043e\u0436\u0435\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-61aab020-2e19-4e70-8a5a-edee2a0dfbd2", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0431\u044b\u0442\u044c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bfee0aa6-c3f5-49cc-901f-55368fedadad", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0432\u044f\u0437\u0430\u043d\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3508de71-87b0-4026-bc39-20a3fc0accd8", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3403766b-5ec7-4401-be01-c5e420995d5f", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0431\u0449\u0438\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8ff7081f-bce3-4fed-818d-941d0f8be016", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0435\u0434\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ede27dc3-508b-48a6-a160-431fc4ef808f", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0432\u0435\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5754e4f4-d2b0-4769-9560-58e1ee5c1116", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0438\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-23e81dc8-e26a-4100-9ea7-93e1d3ca5637", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e4de59b6-c60c-4f2a-a042-d6e5a22bdf15", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043a"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f4a3046b-81da-4a23-a59d-edea6c66d60b", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0434\u043e\u043b\u0433\u043e\u0441"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-0e424eb4-a477-41d4-ab61-40859711e566", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3ca8b457-30ee-45ce-83d6-9dc2fbb2c746", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0447"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-952f67f1-21c4-406d-a249-f146c5b36651", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043d\u044b\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-3e1ab8d2-d212-446e-9554-f14505d10e9d", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0442\u0440\u0430\u0442\u0435\u0433"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4c99042f-689e-4034-a5f8-629f4f9cf33e", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4bd5ec7f-94ec-4f71-80ca-87c1bbb66260", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d8760ac1-a917-408c-86ff-0f8578cb1614", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043a\u0440\u0443\u043f\u043d\u044b\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-17dfc4d8-6439-4d9d-9cb1-25f38b2abe77", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u0435\u0445\u043d\u043e\u043b\u043e\u0433"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-eaa25878-af76-4db5-8b1e-fd3bd6d39d79", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0438\u0447\u0435\u0441\u043a\u0438\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f3583ab3-e826-4a9b-8727-72754907b467", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0433\u0438\u0433"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-7b3a8a0e-55b8-4c27-8d77-0bf393adabd9", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-fed9424b-6c16-4d17-aff5-de078e3e3a90", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0442\u043e\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-7ffde102-279b-4017-ba4d-d4dc2628a6b3", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9aaca163-a6a3-40e0-8b23-7856b1455b5d", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u0435\u043a\u0443"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ae78e8b1-ddb6-4e1c-b4ee-a45288359d76", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0449\u0438\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b4fde465-d0c8-4a71-b75d-d6965cb3b977", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u0447\u0435\u0441\u043a\u0438\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-476f1dd0-0f1c-41d3-a698-e457e5e73fc8", "object": "chat.completion.chunk", "created": 1784962426, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0443\u0441\u043b\u043e\u0432\u0438\u044f\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-a1440b03-7cbf-4fa3-bf87-676a6f56785d", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5af948e3-1f5f-42d2-a10e-4ee83f2892e0", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\n\n"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bb9a3472-de52-4c8a-8463-6e0892e4d095", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u041d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-aa22d94c-963b-4785-85ca-c480ea573c51", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043a"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e9cf7085-c3bf-4056-ba70-f952061a6800", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u043d\u0435\u0446"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1dbf558c-9b17-4e94-bdb1-190c40ff7ecf", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6dd56a63-2707-4893-a5a0-f38d1487413f", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0431\u0441\u0443\u0436"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-2523bc8e-a327-4244-a7fa-360b9874cf66", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0434\u0430\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-124b1cc7-20bf-4acb-92db-347049a86498", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0441\u044c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b409655b-ff2b-4e4d-b00f-9a07855f95f0", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0431\u043b\u043e\u043a\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bbb8f5d9-3f44-49a3-8879-1c14f8aea63c", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440\u043e\u0432\u043a\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-0c89ee41-e968-496b-8f5e-40d816c7e457", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " GitHub"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-26f5a3d7-8288-490b-b0c3-5b7ed41f6aaf", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " Cop"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8902d4e9-60bc-4c40-a2e8-beee7ddc18c4", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "ilot"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c0797b3f-8b0f-41ec-a3b6-8e395bb0eca1", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5fb0974c-cae1-4c01-b2de-09677607621b", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-fbf983bb-7c2f-4f2a-9572-1cbfd336f8b1", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6ef7d90d-aca4-482a-8c41-d44d2302ead7", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " GitHub"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-08f74dd8-c2e1-4ab1-b8ef-8e43c0a1de2c", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-03625b0c-8b31-4f8d-9732-68d33e97c9c8", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0423\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f94c3167-b845-4ec3-bee9-a6bded48e221", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043f\u043e\u0434"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6c3d1ca2-2069-46a6-8b20-faa4303c67bf", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043a\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-2406f9f4-9cdc-47e0-b322-c3dd7ef38cff", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0441\u0442\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-cb1c1a57-8725-4aef-a194-d15ad7b13b09", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0442\u043c\u0435\u0442\u0438\u043b\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-069e9f72-ec21-498c-962a-fe50c340fd39", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b95e01ee-e221-4797-84fc-4b8e4f77c610", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0447\u0442\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5800b0f5-de09-4c5d-8d5f-6962e039f01a", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u044d\u0442\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-8b0eb604-67a7-4ec5-bccd-5c2ad5f8a1f5", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u043e\u0431\u044b\u0442\u0438\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-40308aca-e1ad-45ef-a511-71508d6500bf", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0442\u0430\u043b\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d4665087-b786-4316-b8d5-0cc57b522191", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0438\u043c\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-018880fc-0de3-4748-8dd2-bfa06ab71d97", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u043b\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-a706acbb-1e6a-466b-bf68-d44c3d589ef0", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-9252fec8-4095-4dac-9719-6de8143bcbdc", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0440\u0430\u0441\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-726535c9-8ed9-476f-9986-e2d513ace415", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0443\u0449"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f3a007b7-d1e1-43e4-8501-80d98e910671", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u0433\u043e"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1a001ff0-4e87-486d-b447-174b660187a4", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0430\u043f\u0440\u044f\u0436\u0435\u043d\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d30ab795-c79e-44bc-b9fb-74bc047471ce", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043c\u0435\u0436\u0434\u0443"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-58c37bb6-9ae7-4d9a-bcd6-cbc17c2c0c7d", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-84b0a5c3-6c07-4c95-8858-e8cea7ec166f", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0447\u0438\u043a\u0430\u043c\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1340dd9e-38dd-499b-bb3c-a96405029dc3", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b2e25e55-9e20-4bf0-9c26-8b9b03dbad7a", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043a\u043e\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-22c1c986-572d-4a29-be78-24ff0db0afb1", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043f\u043e\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-cc593633-2839-492e-b80a-a5bf9b01558d", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6ab4b661-dc32-4ad9-acc9-310ae9ae2775", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0438\u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-cfc440b5-2db1-4da3-96b2-ce8a965b6e8e", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043d\u044b\u043c\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b7655147-4c8f-47a8-95d8-c5b63f8660ef", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438\u043d\u0441\u0442\u0440\u0443"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-be4b488a-cc09-413d-83f5-51ff3b03472d", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c5b098d0-3461-4183-b420-7e0e63088780", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u043d\u0442\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-f0ea0667-b1e7-4259-9ca4-928cbe216861", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043c\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-115dc92a-5956-4daa-802e-d03b4ec2803e", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d6fe7c6c-f740-44b8-afe9-0e6b71822e37", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u041c\u0430\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-14d8dab0-2852-4095-bcac-43ec6ed54cec", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u044b\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c3dad857-c562-41b5-a333-bf6c496d94b5", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432\u044b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ac10ff2d-95d3-4c57-b86e-a398fc4df1ba", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440\u0430\u0437"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bd7025f2-ccab-4996-ba2a-38d1a26d21aa", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0438\u043b"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6de08036-2e88-4345-ab5f-2366a150e5b7", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043e\u0431"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-4fb4366f-49c8-45e6-8f5f-50e9b55c6d41", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0435\u0441"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-74fcf60f-2f9d-4aec-93de-beae63d3b770", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043f\u043e\u043a\u043e\u0435\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-5e860d78-b3df-4ad9-bf44-6be690723dd1", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043d\u043e\u0441\u0442\u044c \u0442\u0435\u043c, \u0447\u0442\u043e \u0442\u0430\u043a\u0438\u0435 \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d\u0438\u044f \u043c\u043e\u0433\u0443\u0442 \u0437\u0430\u043c\u0435\u0434\u043b\u0438\u0442\u044c \u0432\u043d\u0435\u0434\u0440\u0435\u043d\u0438\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-357171a7-7a5f-4a4b-af09-b86f5d4006c8", "object": "chat.completion.chunk", "created": 1784962427, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0418"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-cdd43647-1867-4dd3-bb5c-afd2b4e94220", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0418-\u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u043e\u0432 \u0432 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u043e\u0446\u0435\u0441\u0441\u044b \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0438\u0441\u0442\u043e\u0432. \u041a\u043e\u043b\u043e\u0434\u0435\u0437\u0435\u0432, \u0432 \u0441\u0432\u043e\u044e \u043e\u0447\u0435\u0440\u0435\u0434\u044c, \u043f\u0440\u0435\u0434\u043f\u043e\u043b\u043e\u0436\u0438\u043b, \u0447\u0442\u043e \u044d\u0442\u043e \u043c\u043e\u0436\u0435\u0442 \u043f\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043a \u0440\u043e\u0441\u0442\u0443 \u043f\u043e\u043f\u0443\u043b\u044f\u0440\u043d\u043e\u0441\u0442\u0438 \u0430\u043b\u044c\u0442\u0435\u0440\u043d\u0430\u0442\u0438\u0432\u043d\u044b\u0445 \u0440\u0435\u0448\u0435\u043d\u0438\u0439 \u0438 \u043e\u0442\u043a\u0440\u044b\u0442\u043e\u0433\u043e \u041f\u041e. \u0418\u0432\u0430\u043d \u041a\u043e\u043c\u0430\u0440\u043e\u0432 \u0441\u043e\u0433\u043b\u0430\u0441\u0438\u043b\u0441\u044f \u0441 \u0442\u0435\u043c, \u0447\u0442\u043e \u044d\u0442\u043e \u0432\u0430\u0436\u043d\u044b\u0439 \u0441\u0438\u0433\u043d\u0430\u043b \u0434\u043b\u044f \u0432\u0441\u0435\u0439 \u0438\u043d\u0434\u0443\u0441\u0442\u0440\u0438\u0438, \u0443\u043a\u0430\u0437\u044b\u0432\u0430\u044f \u043d\u0430 \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e\u0441\u0442\u044c \u0431\u043e\u043b\u0435\u0435 \u043f\u0440\u043e\u0437\u0440\u0430\u0447\u043d\u043e\u0439 \u043f\u043e\u043b\u0438\u0442\u0438\u043a\u0438 \u0432 \u043e\u0442\u043d\u043e\u0448\u0435\u043d\u0438\u0438 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u044f \u0418\u0418-\u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u043e\u0432.\n\n\u0412 \u0446\u0435\u043b\u043e\u043c, \u0432\u044b\u043f\u0443\u0441\u043a \u043f\u0440\u043e\u0448\u0435\u043b \u0432 \u0444\u043e\u0440\u043c\u0430\u0442\u0435 \u0436\u0438\u0432\u043e\u0433\u043e \u043e\u0431\u0441\u0443\u0436\u0434\u0435\u043d\u0438\u044f, \u0433\u0434\u0435 \u0432\u0435\u0434\u0443\u0449\u0438\u0435 \u0438 \u0433\u043e\u0441\u0442\u044c \u0434\u0435\u043b\u0438\u043b\u0438\u0441\u044c \u0441\u0432\u043e\u0438\u043c\u0438 \u0432\u0437\u0433\u043b\u044f\u0434\u0430\u043c\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-aa55666e-e392-494a-9a53-947f3aa0e651", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043d\u0430"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-b17c39a8-2b60-497b-8ef7-6bf14e8c00a4", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0442\u0435\u043a\u0443"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-cf8312de-a192-4ada-b86c-6fb1f87cb71e", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0449\u0438\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-2959bd31-8f82-49dd-bff8-98c4779a6bb5", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u043e\u0431\u044b\u0442\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-96aa8433-a35d-4a31-a39d-a5b3654720a5", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0432"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e8c7889d-5cef-4df8-ab5d-8b585a357d05", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043c\u0438\u0440\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1b23616e-caad-41d2-b386-809ba639a96a", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0418"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-89884c4d-0bd7-4fce-bcb1-24293d816ef5", "object": "chat.completion.chunk", "created": 1784962428, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0418"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-dd8adb7a-a575-4e2f-839b-b9719b1b9c0b", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": ","}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-06301616-4209-4177-8139-eb0460d5775e", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0441\u0442\u0430\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-fc431569-3b39-4ca5-bd7c-1c15d4a7244a", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0430\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d55f9da2-1396-4633-9474-caf1c494260f", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0441\u044c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-86f6e272-384b-4cd1-b537-984de52cb89b", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043f\u043e\u043d\u044f\u0442\u044c"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-ffd7d29c-42b5-4220-9b6b-b3a88f98f91f", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438\u0445"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-bb6bfd38-0265-4cb7-8fb4-d908cd9f7e60", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0434\u043e\u043b\u0433\u043e\u0441"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-be00e0ae-7f15-42d0-ac4e-240a27dce778", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e1cdfbc2-ad6a-4c53-9cee-82f0a82a05bd", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043e\u0447"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-535cbd9b-b34c-46b8-b1ab-f6e0ac4dbcca", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u043d\u044b\u0435"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-d3e15500-f91c-4e12-8393-c761f5be9fad", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u043f\u043e\u0441\u043b\u0435\u0434\u0441\u0442\u0432\u0438\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-6b7e0b4b-13db-4f26-a2fa-ea57c1170064", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0434\u043b\u044f"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-529b6136-d87f-434d-9eab-79cb7c65e067", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": " \u0438\u043d"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-1a9fd4c0-3af3-4fb2-8b6e-4ccb3db425ab", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0434"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c1baaaa3-50b5-4203-b690-cb4cd0c26b82", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0443\u0441\u0442"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-c0ca2c8d-731e-4419-8649-6d7bf61a7a56", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "\u0440\u0438\u0438"}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-84401ab1-6838-401e-9f41-9751da1f20f0", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {"content": "."}, "logprobs": null, "finish_reason": null}]}
+
+data: {"id": "morag-audio-e51f376a-9656-4e34-b385-ea0ea10cdb43", "object": "chat.completion.chunk", "created": 1784962429, "model": "morag-audio", "choices": [{"index": 0, "delta": {}, "logprobs": null, "finish_reason": "stop"}]}
+
+data: [DONE]

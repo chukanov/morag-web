@@ -1,0 +1,21 @@
+# Обратный прокси apache к BFF на петле — ШАБЛОН. Сайт может жить под префиксом рядом с другим
+# сайтом на том же домене: проксируйте ПОИМЁННО префиксы, которые просит фронт
+# (`web/js/router.js::RESERVED` + `/js`, `/css`, `/assets`, `/favicon.svg`, `/signin`, `/lab`).
+# Пароля здесь НЕТ: вход держит сам сайт (форма /signin и cookie) — Basic Auth на прокси ломают
+# прокси-помощники в браузерах (отвечают на любой 401-челлендж паролем от прокси).
+ProxyPreserveHost On
+RequestHeader set X-Forwarded-Proto "https"
+
+# Ответ агента — SSE (минуты): без no-gzip mod_deflate копит поток до конца ответа, а прокси
+# рвёт соединение через 60 с.
+<Location /api/ask>
+    SetEnv no-gzip 1
+    SetEnv proxy-nokeepalive 1
+    ProxyPass http://127.0.0.1:8080/api/ask timeout=900 flushpackets=on
+    ProxyPassReverse http://127.0.0.1:8080/api/ask
+</Location>
+<Location /talks>
+    ProxyPass http://127.0.0.1:8080/talks
+    ProxyPassReverse http://127.0.0.1:8080/talks
+</Location>
+# … и так для каждого префикса: /api /js /css /assets /favicon.svg /signin /voices /lab

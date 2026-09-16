@@ -1,0 +1,30 @@
+# Рабочий конфиг с адресами и ключами — только app/config.example.yml в git.
+/app/config.yml
+# Данные BFF: журнал вопросов, счётчик лимитов, ключ cookie и снимки учёток вошедших.
+/app/data/
+*.jsonl
+# Рабочие конфиги движка (с ключом LLM) — в git только *.example.yml.
+corpora/**/morag-config.yml
+corpora/**/morag-config-record.yml
+corpora/**/engine-state/
+corpora/**/probe-run-*.md
+# Реестр голосов — биометрия. В git никогда.
+*speaker_registry*.json
+# Корпуса кроме демо и примера живут в своих репозиториях (см. README).
+corpora/*
+!corpora/demo/
+!corpora/example/
+# Что ждёт транскрибации, видео и сырые сайдкары — не в git.
+corpora/*/inbox/*
+corpora/**/media/*
+!corpora/demo/media/*.mp4
+corpora/**/record.json
+corpora/**/*.aiff
+corpora/**/slides/
+corpora/**/*.bak*
+.venv/
+__pycache__/
+.pytest_cache/
+node_modules/
+.DS_Store
+.claude/

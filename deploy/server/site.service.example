@@ -1,0 +1,19 @@
+[Unit]
+Description=morag-web — сайт записей (uvicorn)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=www
+Group=www
+# ⚠️ Из корня чекаута: иначе `app/logging.py` затеняет стандартный `logging`.
+WorkingDirectory=/srv/morag-web
+Environment=PYTHONUNBUFFERED=1
+# Конфиг корпуса может лежать в другом каталоге, чем код (свой репозиторий корпуса).
+Environment=MORAG_WEB_CONFIG=/srv/corpus/app/config.yml
+ExecStart=/srv/morag-web/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8080
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,587 @@
+{
+  "_doc": "Происхождение файлов, скопированных из morag-audio-web. Проверяется tests/test_lineage.py.",
+  "_why": "Репозиторий заведён копией, а не форком: корпоративный корпус и фамилии сотрудников не могут жить в личном репозитории, а общий пакет на ~2900 строк не заслужен (настоящий общий движок — morag). Цена копии — расхождение; манифест её и страхует: пути в обоих репозиториях одинаковые, поэтому сверка — это diff по списку verbatim.",
+  "_status": {
+    "verbatim": "байт в байт как в источнике; тест падает, если файл правили, не обновив манифест",
+    "edited": "правленный нами; sha256 — хеш ИСХОДНОГО файла на from_commit, чтобы знать, от чего отталкивались",
+    "ours": "наш собственный, апстрима у него нет"
+  },
+  "source": {
+    "repo": "morag-audio-web",
+    "commit": "86f0f6b5595e2a58e1e2f8d66819ef0eea461bfc",
+    "copied": "2026-08-30"
+  },
+  "files": {
+    "app/README.md": {
+      "status": "edited",
+      "sha256": "677e5d64387a433f70f246e80e2fc53c061e6d43ac17e588d392b1962f88b27e"
+    },
+    "app/__init__.py": {
+      "status": "edited",
+      "sha256": "faf307b2648d3e208f79ed0c16da7084a40fc2d537d4872dd7b8db70acaec259"
+    },
+    "app/api/__init__.py": {
+      "status": "verbatim",
+      "sha256": "40cecd335f31c0841de2c0e94290751d5112bff546152c0358b38b57eeb80bc5"
+    },
+    "app/api/ask.py": {
+      "status": "edited",
+      "sha256": "9b011da67b8bcf515a5420827f20a2369094f4fc50b4d6d247918c28332e5ac9"
+    },
+    "app/api/edits.py": {
+      "status": "ours"
+    },
+    "app/api/schemas.py": {
+      "status": "edited",
+      "sha256": "5a180b75d7e538d5c79df22afe4a815dcb9af6b0826c771840e936489afd43ae"
+    },
+    "app/api/site.py": {
+      "status": "edited",
+      "sha256": "dae31ded013f357a2f078f15fbe4b2e9fc56b99913014073c8666d3f98a208a2"
+    },
+    "app/api/voices.py": {
+      "status": "ours"
+    },
+    "app/chat/__init__.py": {
+      "status": "verbatim",
+      "sha256": "80ee9fdfbab17ef2aa8acf73ea31d4ee308bf305797b96ab6e251b5209719c15"
+    },
+    "app/chat/prompt.py": {
+      "status": "edited",
+      "sha256": "7d77c0892f10506ce732e286cefcdf41b681acc225d4df7501ddcfd1922e915e"
+    },
+    "app/chat/topic.py": {
+      "status": "edited",
+      "sha256": "9edba43477f542dd04e0ff961707c31ee3be4af94fdfd8accb6bcb62e4c8760f"
+    },
+    "app/config.example.yml": {
+      "status": "edited",
+      "sha256": "90e76207866458f1249b38f705ae02b993a4742ede795f29f3d29acaf5f98e04"
+    },
+    "app/config.py": {
+      "status": "edited",
+      "sha256": "35e415e0c3ce2161be8888074869b63a12f366c3bf64f66df4b9fe08aba4420e"
+    },
+    "app/content/__init__.py": {
+      "status": "edited",
+      "sha256": "392c1a2cd3c3ecbe096b962d1ee8be6d02beb61899fc6f81ee1fd844fd13ea1b"
+    },
+    "app/content/edits.py": {
+      "status": "ours"
+    },
+    "app/content/frontmatter.py": {
+      "status": "verbatim",
+      "sha256": "9343b620e82fa48e8e06b954dff6f245fb5673e70a1f0f062f4e95e89d59ce77"
+    },
+    "app/content/rebuild.py": {
+      "status": "ours"
+    },
+    "app/content/records.py": {
+      "status": "edited",
+      "sha256": "e4c4788e64eadd844fb846b5b1d92bcd8c566491a0b4a9488e9fcf881ad41bf9",
+      "from": "app/content/episodes.py"
+    },
+    "app/content/resolve.py": {
+      "status": "edited",
+      "sha256": "f14ef9a0dff3d8b65af8f9fd5d594ead658cefeb73ce5669e63cda0337c92bf9"
+    },
+    "app/content/tokens.py": {
+      "status": "ours"
+    },
+    "app/content/transcript.py": {
+      "status": "verbatim",
+      "sha256": "4dd7887273e27bd8f95dc29e939070db8e267009b4eca440dc349e57606b42db"
+    },
+    "app/content/voices.py": {
+      "status": "ours"
+    },
+    "app/content/words.py": {
+      "status": "edited",
+      "sha256": "7c89c2bce8ccd97ae43f7d36b50a70d16260a1a4acece6e8736a4a14f3d79f0e"
+    },
+    "app/engine/__init__.py": {
+      "status": "edited",
+      "sha256": "5afcbc5fea58b506d9a577739a73793455eeb174dd85271c3cfba973031e0cbe"
+    },
+    "app/engine/chunk_html.py": {
+      "status": "verbatim",
+      "sha256": "309276a1c3d359ca907c15234a32bfdc0360ab51c0521198ab7f635f1bf9428b"
+    },
+    "app/engine/client.py": {
+      "status": "verbatim",
+      "sha256": "5cf70446a1761aa87223daba0f557691b6d5515d4d4b710dae7bea94db07bab5"
+    },
+    "app/engine/frames.py": {
+      "status": "edited",
+      "sha256": "539b59b52b970f22de32bfe7d514489083d3d4b8db14b6c96b52960d67488e43"
+    },
+    "app/engine/normalize.py": {
+      "status": "edited",
+      "sha256": "b883db7f80aa8a7633eb9a8e735ef128c752eef890b1466b4ce7097ab772317e"
+    },
+    "app/engine/sse.py": {
+      "status": "verbatim",
+      "sha256": "cb98d2aa9d21ad8b4805f21771be21e311b2375551b1c1b3c531690756a66104"
+    },
+    "app/journal.py": {
+      "status": "verbatim",
+      "sha256": "8682586c8f1eaa462cf713a324dd7722fa00061cef314f81453b8fd4113c93d3"
+    },
+    "app/limits.py": {
+      "status": "edited",
+      "sha256": "88bed64a3124c13ea668f46aa04d2e8066373df07044042602a166e8da9813dd"
+    },
+    "app/logging.py": {
+      "status": "edited",
+      "sha256": "a96b0b19f47c3431512c23619b98f0d8a8ba18bd88800fa09c843699ad8c08df"
+    },
+    "app/main.py": {
+      "status": "edited",
+      "sha256": "dfec4339245f1ef83f9d04708b409a6432d4707a7de8fcf4a391300df21c9bf4"
+    },
+    "app/meta.py": {
+      "status": "edited",
+      "sha256": "6515238728ef346b331a9246071717c081a277364339456f303319d856ebb724"
+    },
+    "app/requirements.txt": {
+      "status": "edited",
+      "sha256": "f6e2fc04db054d6c7d88055e8dbc4f1f269abbbac06a42fcadcc5cbba067b889"
+    },
+    "pytest.ini": {
+      "status": "verbatim",
+      "sha256": "6fa6727cce8bb9e531c64a3f634913e2b05a99473312e6cf4385045a5f5c8860"
+    },
+    "tests/conftest.py": {
+      "status": "ours"
+    },
+    "tests/fixtures/engine_catalog.sse": {
+      "status": "verbatim",
+      "sha256": "91d16ae55c07e54eba6ad44a9c2a12e8a58bae735efbdefd456a1270b3e31298"
+    },
+    "tests/fixtures/engine_h200.sse": {
+      "status": "verbatim",
+      "sha256": "da3811305062af681fc90fdd6127c4ca6b840f897a0b5ac5b6b92c231c07b742"
+    },
+    "tests/js/api-slug.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/dialogs.test.mjs": {
+      "status": "edited",
+      "sha256": "2bc52801f9f9d547659f6d36892a85c69dfc421d9bede3d429ec3ae194817498"
+    },
+    "tests/js/gist.test.mjs": {
+      "status": "verbatim",
+      "sha256": "beab9e221420d110a49555425e89368478f89919d1d5a0875135c1d4857f35c3"
+    },
+    "tests/js/hub.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/imports.test.mjs": {
+      "status": "edited",
+      "sha256": "216cdc272a595e26733454448752f26e23716cb8d917dc2708841da33ce6136f"
+    },
+    "tests/js/karaoke.test.mjs": {
+      "status": "edited",
+      "sha256": "535285af4dcb1f394970c3d65b40c24d3d2972ad17ba94ef5f98e096e7e02a54"
+    },
+    "tests/js/md.test.mjs": {
+      "status": "verbatim",
+      "sha256": "d8f720a7c75ac0df61c46f80d4663faa3220a8f88c4c7442efce182feec93c46"
+    },
+    "tests/js/moments.test.mjs": {
+      "status": "edited",
+      "sha256": "f40abf659e5adbd71726943a9645c01120465163d2f7916c859d4b157433e118"
+    },
+    "tests/js/player.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/plural.test.mjs": {
+      "status": "verbatim",
+      "sha256": "70b0249c537df41eea3a2956b0b6a79c04a7694a1eab3239a52a3cafbaa70dc6"
+    },
+    "tests/js/records.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/router.test.mjs": {
+      "status": "edited",
+      "sha256": "a8a4ec88d28dcb4f75bfeb3943b94c4c4d08f949ceea54fc3069dcc40eec5f5d"
+    },
+    "tests/js/subs.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/topic.test.mjs": {
+      "status": "edited",
+      "sha256": "ded134df1f1381f2e81441c078e378cc1b128db9c752a4674c1127a90c147b1c"
+    },
+    "tests/js/turn.test.mjs": {
+      "status": "edited",
+      "sha256": "55a19167a1c7798e8490c2d9604b82f3be85a08390108d99f2d2b18be15568e7"
+    },
+    "tests/test_ask_api.py": {
+      "status": "ours"
+    },
+    "tests/test_brand.py": {
+      "status": "edited",
+      "sha256": "689ff4323c777f31c2144f28f84e73dc3a9e9138f397e3e36cc5494fc0662202"
+    },
+    "tests/test_content.py": {
+      "status": "edited",
+      "sha256": "61a0321fc800af421cd2bf7890cb239f5854b968b71f2e327a2d803aa6e2ff4a"
+    },
+    "tests/test_corpora_api.py": {
+      "status": "ours"
+    },
+    "tests/test_edits_api.py": {
+      "status": "ours"
+    },
+    "tests/test_engine.py": {
+      "status": "edited",
+      "sha256": "fd2489d1752a9f3108b4f03cc7b3dcb4940a4c9c3be4cf7110686c69a10bfdcd"
+    },
+    "tests/test_journal.py": {
+      "status": "verbatim",
+      "sha256": "b5e4632e7585809ed0c2e9ca5e5a5eee8a36ec0d400c873bc928126fdbd46d05"
+    },
+    "tests/test_limits.py": {
+      "status": "verbatim",
+      "sha256": "0f6ba1b13287aabb74ad2ff72a9bf762ba0afb4be953cc494d9adc12f86621f7"
+    },
+    "tests/test_lineage.py": {
+      "status": "ours"
+    },
+    "tests/test_make_record.py": {
+      "status": "ours"
+    },
+    "tests/test_meta.py": {
+      "status": "edited",
+      "sha256": "8d1afef813df8d6f70c539e2fbc2cc10f97f68503071a7792616b3b9ebeb7769"
+    },
+    "tests/test_pages.py": {
+      "status": "edited",
+      "sha256": "c81d2d48f30ea7165e2e8347ead6a196338670a2dc7d1c452ad21525360e615c"
+    },
+    "tests/test_resolve.py": {
+      "status": "ours"
+    },
+    "tests/test_turn_edits.py": {
+      "status": "ours"
+    },
+    "tests/test_video_annotations.py": {
+      "status": "ours"
+    },
+    "tests/test_video_slides.py": {
+      "status": "ours"
+    },
+    "tests/test_voices.py": {
+      "status": "ours"
+    },
+    "tests/test_words.py": {
+      "status": "edited",
+      "sha256": "40e1c7e963cf4b6ff0384bde44c53bd5dd6cee67d8798cb907a09265a6cbb70f"
+    },
+    "tools/make_annotations.py": {
+      "status": "ours"
+    },
+    "web/assets/fonts/mono-cyr-400.woff2": {
+      "status": "verbatim",
+      "sha256": "798d60261c091fa0735d73a9c10c819d27b27cbbcfdcdf6b8ba94e0d41a7d99f"
+    },
+    "web/assets/fonts/mono-lat-400.woff2": {
+      "status": "verbatim",
+      "sha256": "b4e2aee32a6162b66a40f6fc7ac09962b0385e467ca8b143d92a091b16eaff6d"
+    },
+    "web/assets/fonts/serif-cyr-400.woff2": {
+      "status": "verbatim",
+      "sha256": "050aee25e3462f72c4d357ee964b8df1801e701bae8af275b697581a87c04a48"
+    },
+    "web/assets/fonts/serif-cyr-700.woff2": {
+      "status": "verbatim",
+      "sha256": "bec4e724c49bde6d6b3f15038c8015f5dc7c810bdaadd3aee537ab72afc50e4a"
+    },
+    "web/assets/fonts/serif-lat-400.woff2": {
+      "status": "verbatim",
+      "sha256": "4271064a37f3ffc0aac5f3806db8a72acc23e19447d1804e4e80d8796cbf6330"
+    },
+    "web/assets/fonts/serif-lat-700.woff2": {
+      "status": "verbatim",
+      "sha256": "bf23a7a4eebedbb87d4084a69496b29815914a18e339a00f5dc73a03c9c9328f"
+    },
+    "web/css/app.css": {
+      "status": "edited",
+      "sha256": "0e9d95486b4f4c2632b8278df7a0dbeaa07c525de42d8e27c7ca91b4816c4274"
+    },
+    "web/css/fonts.css": {
+      "status": "verbatim",
+      "sha256": "31ece1f87db9f909cb2bd711e132bbcad6e4232b550c01e3622ead78e8199f46"
+    },
+    "web/css/tokens.css": {
+      "status": "edited",
+      "sha256": "bf7b8cb22a85cd8e985c0807e6e6964c1549d5250fe0b90a9fc01a0a783fc3a3"
+    },
+    "web/favicon.svg": {
+      "status": "verbatim",
+      "sha256": "272c6a1c23a4cacb27f5c8c94a02051f7361d3ee993a5f3a54d7f26d6e9d2bb3"
+    },
+    "web/index.html": {
+      "status": "edited",
+      "sha256": "4f0106b9d3553cde322529fc4071bb98f2157ec75e09775195b3305fa1c1dd42"
+    },
+    "web/js/api.js": {
+      "status": "edited",
+      "sha256": "3af1cf63c98655e4ddb4dc27649cd0eb74189dac3b9ab8db1d0c2540128003a1"
+    },
+    "web/js/chat/controller.js": {
+      "status": "edited",
+      "sha256": "dc60017b2e4a4fb480861879d095ad4f226a5d1115763e17137d1ad7cd7f7f0b"
+    },
+    "web/js/chat/gist.js": {
+      "status": "verbatim",
+      "sha256": "72408d875c635891026d16c5d3961fb5743ab6d4cc5f848977867aec575fe1cf"
+    },
+    "web/js/chat/history.js": {
+      "status": "verbatim",
+      "sha256": "c4d9462c02f6b679c66863a7567e7b035c3f4f85aad80d6ec078e58c94c2a673"
+    },
+    "web/js/chat/md.js": {
+      "status": "verbatim",
+      "sha256": "22db83786e353a3a68b7fa9e66d3ec8d719c9a78758cdd92856e2e8d0e8288ff"
+    },
+    "web/js/chat/moments-block.js": {
+      "status": "edited",
+      "sha256": "474c3ce638171ae97ef79e463b8486d7c9fa221b50b1712a0129d0da49c2c6e0"
+    },
+    "web/js/chat/moments.js": {
+      "status": "edited",
+      "sha256": "d75a3ff1f13c08935bc1690bbf32e38479a9f5d153c131688dc09eedcf29c835"
+    },
+    "web/js/chat/save.js": {
+      "status": "edited",
+      "sha256": "52f2c6e8f084a1311a174a1fc8386e7c3eac0a4789f86cecb7ccdcd99b819fa4"
+    },
+    "web/js/chat/topic.js": {
+      "status": "edited",
+      "sha256": "ff73a73eb00ccd5f7b9c60c8b352527246bd5e20adaa96ff7aa84117c96cf49d"
+    },
+    "web/js/chat/view.js": {
+      "status": "edited",
+      "sha256": "f7b90a5ee152eb0aa35a856036fb7c56bcc4be83b398cececa906f6704eb32b2"
+    },
+    "web/js/hub.js": {
+      "status": "ours"
+    },
+    "web/js/main.js": {
+      "status": "edited",
+      "sha256": "e18cb68ba97a4f4627fa81fe4930622d3cd3c43869474a01100de322a275181b"
+    },
+    "web/js/records/filter.js": {
+      "status": "ours"
+    },
+    "web/js/records/list.js": {
+      "status": "edited",
+      "sha256": "8ed4e6d0865274960c49a2db12b9ce9b2eeaa82315ea4cb76544ca89e036bd7b",
+      "from": "web/js/episodes/list.js"
+    },
+    "web/js/records/reader.js": {
+      "status": "edited",
+      "sha256": "b936031c7fdbfc7319cadf70fdf31ddbffffc7a8be1bf67b810ae02871174f0c",
+      "from": "web/js/episodes/reader.js"
+    },
+    "web/js/records/subs.js": {
+      "status": "ours"
+    },
+    "web/js/router.js": {
+      "status": "edited",
+      "sha256": "5b62fbf548b08fad6102627c555cccdc7010b873810b29dd9795da16a07f03e3"
+    },
+    "web/js/sse.js": {
+      "status": "verbatim",
+      "sha256": "34510d60aa8c33edca463297009d3f23624c695c90c07c4d6d9082660fb04c94"
+    },
+    "web/js/ui/analytics.js": {
+      "status": "edited",
+      "sha256": "046cfbde2ae4779ebbc728a04539de21c5b806003e9c2d559db36f22091edcc5"
+    },
+    "web/js/ui/ascii.js": {
+      "status": "edited",
+      "sha256": "ef4abf8482a94b3031fee66e293108711fe963d396eee82cc9138a7677cab047"
+    },
+    "web/js/ui/dom.js": {
+      "status": "edited",
+      "sha256": "94d0607531fe76272033d2bb08f5b103e0857360e80a089306e47aa8bac21807"
+    },
+    "web/js/ui/karaoke.js": {
+      "status": "edited",
+      "sha256": "214c669447b8803c99a6a8a39735abe78f3de5915613ba6688d3a995be437097"
+    },
+    "web/js/ui/mark.js": {
+      "status": "ours"
+    },
+    "web/js/ui/miniplayer.js": {
+      "status": "edited",
+      "sha256": "83b2db650f8946ef23fcc74452f72525bb68573371b5978bc8dce0766b089194"
+    },
+    "web/js/ui/player.js": {
+      "status": "edited",
+      "sha256": "696d33bc7241d90518a271d7e47c921479cd9ee846f9d0f61e0fc3e2dff504d6",
+      "from": "web/js/ui/audio.js"
+    },
+    "web/js/ui/theme.js": {
+      "status": "edited",
+      "sha256": "735550c4c9542d01c83f42a7544a66451e91ec6b5ecc262db8be235f33774b54"
+    },
+    "web/js/voices.js": {
+      "status": "ours"
+    },
+    "web/js/calendar.js": {
+      "status": "ours"
+    },
+    "tests/test_classify.py": {
+      "status": "ours"
+    },
+    "web/sw.js": {
+      "status": "verbatim",
+      "sha256": "da2ff832a7560ca6f336273484b536c67cfc535703218739b4aadb2b7d0d953d"
+    },
+    "tools/video_batch.py": {
+      "status": "ours"
+    },
+    "tests/test_video_batch.py": {
+      "status": "ours"
+    },
+    "tools/fetch_audio.py": {
+      "status": "ours"
+    },
+    "web/js/records/seek.js": {
+      "status": "ours"
+    },
+    "tests/js/seek.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/theme.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/ask-panel.test.mjs": {
+      "status": "ours"
+    },
+    "web/js/records/ask-panel.js": {
+      "status": "ours"
+    },
+    "web/js/ui/halo.js": {
+      "status": "ours"
+    },
+    "web/lab/halo.html": {
+      "status": "ours"
+    },
+    "web/lab/halo.js": {
+      "status": "ours"
+    },
+    "tools/make_cover.py": {
+      "status": "ours"
+    },
+    "tools/make_blurb.py": {
+      "status": "ours"
+    },
+    "tools/intro_frame.py": {
+      "status": "ours"
+    },
+    "tests/test_intro_frame.py": {
+      "status": "ours"
+    },
+    "tests/test_describe_people.py": {
+      "status": "ours"
+    },
+    "tests/test_ask_prompt.py": {
+      "status": "ours"
+    },
+    "tests/test_make_cover.py": {
+      "status": "ours"
+    },
+    "tests/test_make_blurb.py": {
+      "status": "ours"
+    },
+    "web/js/records/letter-cloud.js": {
+      "status": "ours"
+    },
+    "tests/js/letter-cloud.test.mjs": {
+      "status": "ours"
+    },
+    "web/js/records/magnet.js": {
+      "status": "ours"
+    },
+    "tests/js/magnet.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/halo.test.mjs": {
+      "status": "ours"
+    },
+    "app/api/auth.py": {
+      "status": "ours"
+    },
+    "app/auth/__init__.py": {
+      "status": "ours"
+    },
+    "app/auth/ldap.py": {
+      "status": "ours"
+    },
+    "app/auth/local.py": {
+      "status": "ours"
+    },
+    "app/auth/roles.py": {
+      "status": "ours"
+    },
+    "app/auth/service.py": {
+      "status": "ours"
+    },
+    "app/auth/session.py": {
+      "status": "ours"
+    },
+    "app/auth/store.py": {
+      "status": "ours"
+    },
+    "app/auth/throttle.py": {
+      "status": "ours"
+    },
+    "tests/test_auth.py": {
+      "status": "ours"
+    },
+    "web/js/session.js": {
+      "status": "ours"
+    },
+    "web/js/signin.js": {
+      "status": "ours"
+    },
+    "web/js/ui/user.js": {
+      "status": "ours"
+    },
+    "tests/js/session.test.mjs": {
+      "status": "ours"
+    },
+    "tests/test_favicon.py": {
+      "status": "ours"
+    },
+    "tests/test_config_paths.py": {
+      "status": "ours"
+    },
+    "web/js/ui/boxfont.js": {
+      "status": "ours"
+    },
+    "web/js/ui/brand.js": {
+      "status": "ours"
+    },
+    "web/js/ui/logo.js": {
+      "status": "ours"
+    },
+    "web/js/ui/topbar.js": {
+      "status": "ours"
+    },
+    "tests/js/boxfont.test.mjs": {
+      "status": "ours"
+    },
+    "tests/test_demo_template.py": {
+      "status": "ours"
+    },
+    "tests/requirements.txt": {
+      "status": "ours"
+    }
+  }
+}

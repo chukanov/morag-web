@@ -1,0 +1,125 @@
+# Поисковый стек одного пространства — ШАБЛОН. Поднимается из этого каталога:
+#   SPACE=../corpora/example/spaces/talks docker compose up -d qdrant embedder-gte pipelines pipelines-record
+#   SPACE=… docker compose --profile tools run --rm indexer index          # разовая индексация
+#   docker compose down
+#
+# Переменные: `SPACE` — каталог пространства (в нём morag-config.yml, records/, engine-state/),
+# `QDRANT_DATA` — где хранить базу, `MORAG_REPO` — чекаут движка, `PIPELINE` — имя модели,
+# которое сайт зовёт в `engines.<слаг>.model` (⚠️ равно PIPELINE_NAME контейнера, иначе 404),
+# `NO_PROXY_EXTRA` — хосты, куда контейнеры ходят мимо прокси (ваш LLM-шлюз).
+#
+# ⚠️ Код движка — не из образа, а из рабочего дерева (`$MORAG_REPO`): гоняется ровно то, что
+# лежит в git, и правка движка не стоит пересборки образа. Прокси гасим явно: контейнер не
+# должен идти к внутреннему шлюзу через внешний прокси.
+#
+# Второй процесс (`pipelines-record`) — режим «одна запись»: тот же индекс, свой конфиг
+# (свой промпт, без карты корпуса и каталога). Один процесс морага обслуживает ровно один
+# конфиг, маршрутизации по запросу нет — отсюда два процесса. В `app/config.yml` сайта —
+# `engines.<слаг>.record`.
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.17.0
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - ${QDRANT_DATA:-../corpora/example/qdrant-data}:/qdrant/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/6333'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # Sparse-эмбеддер (GTE), торч на CPU. ⚠️ Память растёт с параллелизмом индексации
+  # (`indexing.concurrency`): при 3 — 4 ГБ и cgroup убивал контейнер, при 1 — 1.9 ГБ.
+  embedder-gte:
+    image: morag-embedder-gte:latest
+    build:
+      context: ${MORAG_REPO:-../../morag}/services/embedder_gte
+    ports:
+      - "127.0.0.1:8081:8081"
+    deploy:
+      resources:
+        limits:
+          memory: 5G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  pipelines:
+    image: morag-pipelines:latest
+    ports:
+      - "127.0.0.1:9101:9099"
+    environment:
+      PIPELINE_NAME: ${PIPELINE:-example}
+      MORAG_CONFIG_PATH: /app/space/morag-config.yml
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      NO_PROXY: ${NO_PROXY_EXTRA:-llm.example.org},host.docker.internal,qdrant,embedder-gte,localhost,127.0.0.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${MORAG_REPO:-../../morag}/src/morag:/usr/local/lib/python3.11/site-packages/morag:ro
+      - ${MORAG_REPO:-../../morag}/services/pipeline/morag_pipeline.py:/app/pipelines/morag_pipeline.py:ro
+      - ${SPACE:-../corpora/example/spaces/talks}:/app/space:ro
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      embedder-gte:
+        condition: service_healthy
+    restart: unless-stopped
+
+  pipelines-record:
+    image: morag-pipelines:latest
+    ports:
+      - "127.0.0.1:9104:9099"
+    environment:
+      PIPELINE_NAME: ${PIPELINE:-example}-record
+      MORAG_CONFIG_PATH: /app/space/morag-config-record.yml
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      NO_PROXY: ${NO_PROXY_EXTRA:-llm.example.org},host.docker.internal,qdrant,embedder-gte,localhost,127.0.0.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${MORAG_REPO:-../../morag}/src/morag:/usr/local/lib/python3.11/site-packages/morag:ro
+      - ${MORAG_REPO:-../../morag}/services/pipeline/morag_pipeline.py:/app/pipelines/morag_pipeline.py:ro
+      - ${SPACE:-../corpora/example/spaces/talks}:/app/space:ro
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      embedder-gte:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Не сервис: запускается разово через `compose run`. ⚠️ Индексация — СИНХРОНИЗАЦИЯ источника:
+  # чего нет в `sources[].path`, то каскадно удаляется из базы. Источник всегда полный.
+  indexer:
+    image: morag-morag-indexer:latest
+    build:
+      context: ${MORAG_REPO:-../../morag}
+    profiles: ["tools"]
+    environment:
+      MORAG_CONFIG_PATH: /app/space/morag-config.yml
+      MORAG_RUN_COUNTER_FILE: /app/state/run_counter.json
+      MORAG_STATUS_FILE: /app/state/index_status.json
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      NO_PROXY: ${NO_PROXY_EXTRA:-llm.example.org},host.docker.internal,qdrant,embedder-gte,localhost,127.0.0.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${MORAG_REPO:-../../morag}/src:/app/src:ro
+      - ${MORAG_REPO:-../../morag}/cli:/app/cli:ro
+      - ${SPACE:-../corpora/example/spaces/talks}:/app/space:ro
+      - ${SPACE:-../corpora/example/spaces/talks}/engine-state:/app/state:rw
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      embedder-gte:
+        condition: service_healthy
