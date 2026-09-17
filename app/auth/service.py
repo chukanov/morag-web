@@ -134,8 +134,13 @@ class AuthService:
 
     def allowed(self, snapshot: dict) -> bool:
         """Открыт ли сайт этому человеку. Локальные — всегда: их и заводят для тех, кого нет в
-        каталоге; доменные — по маскам групп из `auth.access.groups`."""
+        каталоге; доменные — поимённо (`auth.access.users`) или по маскам групп
+        (`auth.access.groups`). Логин в снимке уже нормализован (`store.safe_login`), а в конфиге
+        его могли написать как угодно — сводим той же функцией."""
         if snapshot.get("provider") == "local":
+            return True
+        login = str(snapshot.get("login") or "").lower()
+        if login and login in {safe_login(u) or "" for u in self.cfg.access.users}:
             return True
         return roles.member_of(snapshot.get("groups") or [], self.cfg.access.groups)
 

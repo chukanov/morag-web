@@ -489,6 +489,21 @@ def test_доступ_только_по_группе_а_локальные_вс�
     assert login(c, "petrov").status_code == 200
 
 
+def test_доступ_поимённо_поверх_масок(authed):
+    """Коллега без группы, но по логину в `access.users` — входит; регистр и домен в конфиге не
+    важны (сводится тем же `safe_login`, что и логин при входе). Вычеркнули — сессия кончилась
+    на первом же запросе, как и при снятой группе."""
+    c, directory, _ = authed
+    app.state.auth.cfg.access.groups = ["*_site-users"]
+    assert login(c, "petrov").status_code == 403
+    app.state.auth.cfg.access.users = ["CORP\\Petrov"]
+    assert login(c, "petrov").status_code == 200
+    assert c.get("/api/auth/me").status_code == 200
+    app.state.auth.cfg.access.users = []
+    assert c.get("/api/auth/me").status_code == 401, "вычеркнули из списка — правило ужесточили"
+    app.state.auth.cfg.access.groups = []
+
+
 def test_ужесточили_правило_сессия_кончилась(authed):
     c, _, _ = authed
     login(c, "petrov")
