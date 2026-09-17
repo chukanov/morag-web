@@ -39,3 +39,50 @@ console.log("halo: всё зелёное");
   assert.equal(withoutShadow({ target: "random" }).targets.includes("halo"), false, "без пула — все цели, кроме ореола");
   console.log("halo без теней: ок");
 }
+
+// --- заставка темы со своими настройками: theme.halo.scene (владелец, 18.09) ---------------
+{
+  const props = {};
+  globalThis.document = {
+    documentElement: { style: { setProperty: (k, v) => { props[k] = v; } }, getAttribute: () => null },
+    querySelector: () => null,
+  };
+  globalThis.requestAnimationFrame = () => 1;
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.performance = globalThis.performance ?? { now: () => Date.now() };
+  const { applyHalo, haloOptions, sceneOptions, live, drive, withoutShadow } = await import(join(repo, "web/js/ui/halo.js"));
+
+  applyHalo({ pattern: "random", palette: "aurora", target: "random", targets: ["glyph", "glyph", "halo"], period: 1.5 });
+  assert.deepEqual(sceneOptions(), haloOptions(), "без scene заставка живёт общими настройками");
+
+  applyHalo({ pattern: "random", palette: "aurora", target: "random", targets: ["glyph", "glyph", "halo"], period: 1.5,
+              scene: { target: "ink", shadow: false } });
+  const mark = haloOptions();
+  assert.equal(mark.target, "random", "знак — прежний: scene его не трогает");
+  assert.equal(mark.shadow, undefined);
+  const scene = sceneOptions();
+  assert.equal(scene.target, "ink", "заставка — цвет самих символов");
+  assert.equal(scene.shadow, false, "и без тени");
+  assert.equal(scene.period, 1.5, "остальное — из общих");
+  assert.equal(scene.pattern, "random");
+  assert.ok(live(scene), "заставке нужен живой перелив");
+  const noShadow = withoutShadow(scene);
+  assert.equal(noShadow.target, "ink", "заливка без тени остаётся заливкой");
+  assert.equal(noShadow.shadow, false);
+
+  // drive без тени вешает класс, по которому CSS гасит и статичное свечение контейнера
+  const classes = new Set();
+  const host = { dataset: { cols: 2, rows: 1 }, querySelectorAll: () => [], classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c) } };
+  const run = drive(host, { ...noShadow, pattern: "spin" });
+  assert.ok(classes.has("halo-noshadow"), "класс без тени поставлен");
+  run.stop();
+  assert.ok(!classes.has("halo-noshadow"), "и снят на остановке");
+  drive(host, { pattern: "spin", target: "halo" }).stop();
+  assert.ok(!classes.has("halo-noshadow"), "с тенью класса нет");
+
+  // scene может и цель случайную оставить, но со своим пулом
+  applyHalo({ pattern: "spin", target: "halo", scene: { target: "random", targets: ["ink", "ink"] } });
+  assert.deepEqual(sceneOptions().targets, ["ink", "ink"]);
+  assert.equal(haloOptions().targets, undefined, "общий пул не появился из ниоткуда");
+  console.log("halo scene: ок");
+}

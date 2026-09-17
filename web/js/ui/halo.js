@@ -129,18 +129,34 @@ export function applyHalo(cfg) {
   return HALO;
 }
 
-/** Нужен ли живой перелив (иначе всё делает CSS). */
-export function live() {
-  if (!HALO) return false;
-  const pat = PATTERNS.find((p) => p.id === HALO.pattern);
-  return Boolean((pat && (pat.live || pat.random)) || (HALO.target && HALO.target !== "halo"));
+/** Нужен ли живой перелив (иначе всё делает CSS). `opts` — чьи настройки: знака (по умолчанию)
+ *  или заставки (`sceneOptions()`), у них может быть разная цель. */
+export function live(opts = haloOptions()) {
+  if (!HALO || !opts) return false;
+  const pat = PATTERNS.find((p) => p.id === opts.pattern);
+  return Boolean((pat && (pat.live || pat.random)) || (opts.target && opts.target !== "halo") || opts.shadow === false);
+}
+
+function fields(src) {
+  return {
+    pattern: src.pattern, palette: src.palette, target: src.target || "halo",
+    period: Number(src.period) || 3, targets: Array.isArray(src.targets) ? src.targets : undefined,
+    ...(typeof src.shadow === "boolean" ? { shadow: src.shadow } : {}),
+  };
 }
 
 export function haloOptions() {
-  return HALO ? {
-    pattern: HALO.pattern, palette: HALO.palette, target: HALO.target || "halo",
-    period: Number(HALO.period) || 3, targets: Array.isArray(HALO.targets) ? HALO.targets : undefined,
-  } : {};
+  return HALO ? fields(HALO) : {};
+}
+
+/** Настройки заставки темы: общие, а поверх — `theme.halo.scene` (владелец, 18.09: заставке —
+ *  только цвет символов, без теней, знаку — прежний перелив). Ключ, которого в `scene` нет,
+ *  берётся из общих. */
+export function sceneOptions() {
+  if (!HALO) return {};
+  const base = fields(HALO);
+  if (!HALO.scene || typeof HALO.scene !== "object") return base;
+  return fields({ ...base, ...HALO.scene });
 }
 
 /** Цель «random» — случайная из пула; повтор в пуле — вес («символы» чаще: владелец, 15.09).
@@ -190,6 +206,9 @@ export function drive(host, { pattern = "spin", palette = "aurora", target = "ha
   let raf = 0;
   const step = 1000 / fps;
   const seed = Math.random() * 1000;
+  // Без теней — и статичное свечение контейнера из CSS тоже снимаем (класс, не инлайн: у
+  // заставки оно на самом `.fx-art`, а не на символах).
+  if (!shadow) host.classList.add("halo-noshadow");
 
   function paint(now) {
     raf = requestAnimationFrame(paint);
@@ -228,6 +247,7 @@ export function drive(host, { pattern = "spin", palette = "aurora", target = "ha
     pattern: pat.id, palette: pal.id, target,
     stop() {
       cancelAnimationFrame(raf);
+      host.classList.remove("halo-noshadow");
       for (const x of cells) {
         x.node.style.textShadow = "";
         x.node.style.color = "";

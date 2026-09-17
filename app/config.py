@@ -447,6 +447,17 @@ def halo_payload(theme: dict) -> dict | None:
     raw = theme.get("halo")
     if not isinstance(raw, dict):
         return None
+    out = _halo_fields(raw)
+    # `scene` — то же для ЗАСТАВКИ ТЕМЫ, поверх общего (владелец, 18.09: заставке — только цвет
+    # символов, без ореола/тени, а знаку в шапке — прежний перелив). Ключи те же плюс `shadow`.
+    if isinstance(raw.get("scene"), dict):
+        scene = _halo_fields(raw["scene"])
+        if scene:
+            out["scene"] = scene
+    return out or None
+
+
+def _halo_fields(raw: dict) -> dict:
     out: dict = {k: str(raw[k]) for k in ("pattern", "palette", "target") if isinstance(raw.get(k), str)}
     # Пул целей для `target: random`; повтор — вес (владелец, 15.09: «символы» чаще остальных).
     if isinstance(raw.get("targets"), list):
@@ -456,7 +467,9 @@ def halo_payload(theme: dict) -> dict | None:
     period = raw.get("period")
     if isinstance(period, (int, float)) and not isinstance(period, bool) and period > 0:
         out["period"] = float(period)
-    return out or None
+    if isinstance(raw.get("shadow"), bool):
+        out["shadow"] = raw["shadow"]
+    return out
 
 # Что пространство наследует от витрины, если не задало своё: картинка обложки, знак (рисунок
 # и клетки мордочки) и слово в шапке. Один рисунок на весь сайт, копия у каждого пространства —

@@ -21,7 +21,8 @@ theme:
     sonar: "#57B4A9"
   # Перелив знака и заставки темы: узор, палитра, цель, период. `random` — каждый раз свои;
   # повтор в пуле целей — вес. Заливка (ink) в пул не идёт: съедает буквы.
-  halo: {pattern: random, palette: aurora, target: random, targets: [glyph, glyph, glyph, halo], period: 1.5}
+  halo: {pattern: random, palette: aurora, target: random, targets: [glyph, glyph, glyph, halo], period: 1.5,
+         scene: {target: ink, shadow: false}}   # заставке темы — только цвет символов, без тени; знаку — общее
   fonts: {display: "PT Serif", data: "PT Mono"}
   # Цвет ветки (каталога первого уровня под records/): фронт маркирует им записи везде.
   sections:

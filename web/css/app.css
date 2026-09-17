@@ -794,6 +794,8 @@ body[data-view="chat"] .chat-tools{display:flex}
 }
 /* Живой перелив (узор или цель, которым нужен пересчёт кадров) ведёт JS — CSS-анимация молчит. */
 .logo.halo-live:hover i,.fx-art.halo-live i{animation:none}
+/* перелив без теней (scene.shadow: false или светлая тема): гасим и статичное свечение заставки */
+.halo-noshadow,.halo-noshadow i{text-shadow:none}
 .logo:hover i,.logo:hover .logo-ovl b{animation:logo-halo 3s linear infinite;
   animation-delay:calc(var(--p,0) * -3s)}
 @media (prefers-reduced-motion:reduce){

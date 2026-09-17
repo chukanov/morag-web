@@ -7,7 +7,7 @@
 // раз. Знак в шапке остался (`ui/mark.js`), фоновая анимация ушла вместе с обложкой.
 
 import { phase } from "./mark.js";
-import { TARGETS, drive as driveHalo, haloOptions, live as haloLive, withoutShadow } from "./halo.js";
+import { TARGETS, drive as driveHalo, live as haloLive, sceneOptions, withoutShadow } from "./halo.js";
 
 const RAMP = " .:-=+*#";
 const SKY = " .:-=+*#";
@@ -406,17 +406,19 @@ export function playTopicIntro(pre, { onReveal, disabled = false } = {}) {
   const grid = haloGrid(pre, g);
   // Живой перелив из конфига темы (`theme.halo`) — на время сцены; иначе CSS-ореол, как раньше.
   let haloRun = null;
-  if (haloLive()) {
+  const opts = sceneOptions(); // общие настройки перелива + `theme.halo.scene` поверх
+  if (haloLive(opts)) {
     pre.classList.add("halo-live");
     // ⚠️ Цель «символы» здесь невозможна: сцена сама переписывает текст узлов каждый кадр, и
     // подмена символов дралась бы с ней. Фиксированный glyph → ореол; из случайного пула glyph
-    // просто выпадает — остальные цели (ореол, заливка, волна) сцене не мешают.
-    const opts = haloOptions();
+    // просто выпадает — остальные цели (ореол, заливка) сцене не мешают.
     const pool = (opts.targets || TARGETS.map((t) => t.id)).filter((t) => t !== "glyph");
     let scene = { ...opts, target: opts.target === "glyph" ? "halo" : opts.target, targets: pool };
-    // Светлая тема — без теней, как у знака в шапке (владелец, 16.09): ореол выпадает, и на
-    // сцене остаётся разве что заливка; нет ничего — сцена играет одной сборкой из шума.
-    if (document.documentElement.getAttribute("data-theme") === "light") scene = withoutShadow(scene);
+    // Без теней — светлая тема (владелец, 16.09) или `scene.shadow: false` в конфиге (18.09:
+    // «только цветом самих символов»): ореол выпадает, остаётся заливка; нет ничего — сцена
+    // играет одной сборкой из шума.
+    const light = document.documentElement.getAttribute("data-theme") === "light";
+    if (light || opts.shadow === false) scene = withoutShadow(scene);
     haloRun = scene ? driveHalo(pre, scene) : null;
   }
   const started = performance.now();

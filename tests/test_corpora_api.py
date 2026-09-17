@@ -100,6 +100,12 @@ def test_перелив_знака_доезжает_до_фронта(client):
     assert halo_payload({"halo": "random"}) is None
     assert halo_payload({"halo": {"pattern": "random", "period": 1.5, "junk": 1, "target": 7}}) == {
         "pattern": "random", "period": 1.5}
+    # `scene` — свои настройки заставки темы поверх общих (18.09: заставке — только цвет символов,
+    # без тени; знаку — прежний перелив). Те же поля плюс `shadow`; мусор и пустое — выпадают.
+    assert halo_payload({"halo": {"target": "random", "scene": {"target": "ink", "shadow": False, "junk": 1}}}) == {
+        "target": "random", "scene": {"target": "ink", "shadow": False}}
+    assert halo_payload({"halo": {"target": "random", "scene": {"shadow": "no"}}}) == {"target": "random"}
+    assert halo_payload({"halo": {"target": "random", "scene": "ink"}}) == {"target": "random"}
     assert halo_payload({"halo": {"period": True}}) is None, "bool — не период"
     assert halo_payload({"halo": {"pattern": "clouds", "palette": "aurora", "target": "halo", "period": 3}}) == {
         "pattern": "clouds", "palette": "aurora", "target": "halo", "period": 3.0}
