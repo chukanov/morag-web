@@ -172,10 +172,14 @@ class Staging:
         return out
 
     def set_status(self, rid: str, state: str, **extra) -> None:
+        """Состояние сливается с прежним: `url`/`record`, поставленные приёмом, переживают индексацию."""
         d = self.dir(rid)
         d.mkdir(parents=True, exist_ok=True)
-        (d / "status.json").write_text(json.dumps({"id": rid, "state": state, "at": time.time(), **extra},
-                                                  ensure_ascii=False), encoding="utf-8")
+        path = d / "status.json"
+        prev = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        prev.pop("error", None)
+        prev.update({"id": rid, "state": state, "at": time.time(), **extra})
+        path.write_text(json.dumps(prev, ensure_ascii=False), encoding="utf-8")
 
     def free_bytes(self) -> int:
         self.root.mkdir(parents=True, exist_ok=True)

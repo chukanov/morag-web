@@ -322,6 +322,9 @@
     "tests/test_ingest.py": {
       "status": "ours"
     },
+    "tests/test_ingest_client.py": {
+      "status": "ours"
+    },
     "tests/test_intro_frame.py": {
       "status": "ours"
     },

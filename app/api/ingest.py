@@ -123,8 +123,12 @@ async def finish(request: Request, rid: str) -> dict:
 
     async def job() -> None:
         await core.accept(staging, rid, family=family, cfg=cfg, root=root)
-        for corpus in app.state.corpora.values():
+        url = ""
+        for slug, corpus in app.state.corpora.items():
             corpus.index.refresh_if_stale()
+            if any(m.id == rid for m in corpus.index.all()):
+                url = f"/{slug}/rec/{rid}"
+        staging.set_status(rid, staging.status(rid)["state"], record=rid, url=url)
         if cfg.index:
             queue.submit(f"index:{rid}", partial(core.index, staging, rid, cfg=cfg, root=root, family=family))
 
