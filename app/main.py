@@ -19,12 +19,13 @@ from fastapi.staticfiles import StaticFiles
 
 from . import logging as applog
 from . import meta as ogmeta
-from .api import ask, auth as auth_api, edits, site, voices
+from .api import ask, auth as auth_api, edits, ingest as ingest_api, site, voices
 from .auth import AuthService, gate as auth_gate
 from .chat.topic import TopicMaker
 from .config import APP_DIR, PRODUCT, _inside, engine_for, family_dir, load_config, load_corpora
 from .engine.client import EngineClient
 from .content.edits import Edits
+from .content.ingest import Staging
 from .content.rebuild import Rebuilder
 from .content.tokens import Tokens
 from .content.voices import Voices
@@ -65,6 +66,10 @@ async def lifespan(app: FastAPI):
     app.state.tokens = Tokens([d for p in corpora.values() for d in p.index.dirs])
     app.state.rebuilder = Rebuilder(cfg.editing.rebuild, APP_DIR.parent)
     app.state.rebuilder.start()
+    # Загрузка записей с чужих машин: стейджинг — `<семья>/incoming`, если конфиг не сказал иначе;
+    # вне `records/`, поэтому индексатор недособранного не видит (app/content/ingest.py).
+    app.state.ingest = Staging(Path(cfg.ingest.dir) if cfg.ingest.dir else family / "incoming", family,
+                               base=cfg.ingest.speaker_base, step=cfg.ingest.speaker_step)
     app.state.default_corpus = corpora.get(default_slug) if default_slug else None
     app.state.gate = ConcurrencyGate(cfg.limits.max_concurrent_streams)
     app.state.journal = Journal(journal_path, enabled=cfg.journal.enabled)
@@ -151,6 +156,7 @@ def create_app() -> FastAPI:
     app.include_router(ask.router)
     app.include_router(voices.router)
     app.include_router(edits.router)
+    app.include_router(ingest_api.router)
     app.include_router(auth_api.router)
     # Рубеж входа — ВСЕГДА, вне зависимости от статики: при выключенной авторизации пропускает
     # всё как есть. Стоит до роутинга, статики и SPA-заглушки (Starlette собирает middleware

@@ -179,12 +179,12 @@ class AuthService:
         request.state.user = identity
         return identity
 
-    def capabilities(self, request: Request, editing_enabled: bool) -> dict[str, bool]:
+    def capabilities(self, request: Request, editing_enabled: bool, ingest_enabled: bool = False) -> dict[str, bool]:
         if not self.enabled:
-            # Без авторизации права решает один флаг — как до неё.
-            return {name: bool(editing_enabled) for name in roles.PERMISSIONS}
+            # Без авторизации права решает один флаг — как до неё (у загрузки — свой).
+            return {name: bool(ingest_enabled if name == "ingest" else editing_enabled) for name in roles.PERMISSIONS}
         user = self.user_of(request)
-        return roles.capabilities(user.role if user else None, editing_enabled)
+        return roles.capabilities(user.role if user else None, editing_enabled, ingest_enabled)
 
     def why_line(self, request: Request, subject: str = "") -> str:
         """Подпись правки в словаре. Пусто — когда автора нет (авторизация выключена), и тогда

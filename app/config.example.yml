@@ -110,6 +110,26 @@ journal:
   path: ./data/journal.jsonl
   enabled: true
 
+# Загрузка записи, транскрибированной на чужой машине (`tools/ingest.py` → `/api/ingest`):
+# пока нет сервера с моделями, докладчик гонит стек у себя и загружает пакет, а сервер доводит
+# его до записи тем же `make_record` (настоящие словари, раскладка) и запускает индексацию.
+# Выключено по умолчанию; включённое — право `ingest` (любой вошедший), без входа — только петля.
+ingest:
+  enabled: false
+  # dir: ../corpora/demo/incoming       # стейджинг; пусто — <семья>/incoming (вне records/ — индексатор не видит)
+  # archive: /srv/archive               # корень архива видео (то, что раздаёт media_base); пусто — видео не переносится
+  video_dir: Uploads                    # подкаталог в архиве под загруженные видео → media: Uploads/<id>.mp4
+  max_gb: 12                            # потолок одного файла
+  min_free_gb: 10                       # меньше свободно на диске стейджинга — 507
+  # ⚠️ У чужой машины свой реестр голосов, и её Speaker_N совпали бы с корпусными: номера
+  # сдвигаются в отдельный диапазон, запись живёт с безымянными голосами до правки на сайте.
+  speaker_base: 100000
+  speaker_step: 1000
+  # Команды — argv с подстановками {artifact} {record_dir} {family}; сборка получает флаги сама.
+  # build: [python3, tools/make_record.py]
+  # after: [[python3, tools/make_cover.py, "{record_dir}"], [python3, tools/voices.py, --scan]]
+  # index: [docker, compose, -f, ../corpora/example/../../deploy/docker-compose.yml, --profile, tools, run, --rm, indexer, index]
+
 auth:
   # Вход на сайт: форма + cookie. Выключено — сайт анонимный, как подкаст, и правка
   # держится рубежами `editing` (флаг, отказ сервера, только петля).

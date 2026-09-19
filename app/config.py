@@ -134,6 +134,43 @@ class EditingCfg(BaseModel):
         sys.executable, "tools/make_record.py", "{record_dir}"])
 
 
+class IngestCfg(BaseModel):
+    """Приём записи, транскрибированной на чужой машине (19.09).
+
+    Пока нет сервера с моделями, докладчик транскрибирует запись на своём Mac (`tools/ingest.py`)
+    и загружает на сайт пакет: сырой артефакт адаптера, сайдкары экрана, видео и поля. Сервер
+    доводит его до записи ТЕМ ЖЕ `make_record`, что пересобирает правки, — с настоящими
+    словарями и раскладкой, — и запускает индексацию. Два обязательных условия:
+
+      * стейджинг (`dir`) лежит ВНЕ `records/` и вне `sources[].path` индексатора: недособранная
+        запись в базу не попадает никак;
+      * ⚠️ у чужой машины свой реестр голосов, и её `Speaker_N` совпадают по номерам с корпусными
+        — `names.json` подписал бы чужой `Speaker_3` чужим же именем. Поэтому при приёме номера
+        сдвигаются в отдельный диапазон (`speaker_base`, шаг `speaker_step`): для сайта это
+        по-прежнему безымянные голоса («Это я», карточка голоса работают), а коллизий нет.
+
+    `enabled` по умолчанию FALSE — в примере конфига (он в git) приём выключен; включённый —
+    право `ingest` (`app/auth/roles.py`), без входа — только петлевой адрес, как у правки.
+    Команды — списки argv с подстановками, как `editing.rebuild`; `{record_dir}`, `{artifact}`,
+    `{family}` подставляются. Пути `dir`/`archive` — от файла конфига.
+    """
+
+    enabled: bool = False
+    dir: str = ""                     # стейджинг; пусто — `<семья>/incoming`
+    archive: str = ""                 # корень архива видео на сервере (то, что раздаёт media_base)
+    video_dir: str = "Uploads"        # подкаталог в архиве под загруженные видео
+    max_gb: float = 12.0              # потолок одного файла
+    min_free_gb: float = 10.0         # меньше свободно на диске стейджинга — отказ 507
+    speaker_base: int = 100000        # с какого номера начинаются голоса загруженных записей
+    speaker_step: int = 1000          # шаг между записями
+    build: list[str] = Field(default_factory=lambda: [sys.executable, "tools/make_record.py"])
+    after: list[list[str]] = Field(default_factory=lambda: [
+        [sys.executable, "tools/make_cover.py", "{record_dir}"],
+        [sys.executable, "tools/voices.py", "--scan"],
+    ])
+    index: list[str] = Field(default_factory=list)   # пусто — индексацию не запускать
+
+
 class LdapCfg(BaseModel):
     """Каталог AD/LDAP. Два режима, выбирается по `bind_dn`.
 
@@ -290,6 +327,7 @@ class AppConfig(BaseModel):
     # тот лежит в git. Пусто — раздаём из локального каталога корпуса, как раньше.
     media_base: str = ""
     editing: EditingCfg = Field(default_factory=EditingCfg)
+    ingest: IngestCfg = Field(default_factory=IngestCfg)
     auth: AuthCfg = Field(default_factory=AuthCfg)
     topic: TopicCfg = Field(default_factory=TopicCfg)
     limits: LimitsCfg = Field(default_factory=LimitsCfg)
@@ -373,6 +411,9 @@ def _anchor(data: dict, base: Path) -> dict:
     limits = data.get("limits")
     if isinstance(limits, dict) and isinstance(limits.get("rate_limit"), dict):
         fix(limits["rate_limit"], "state_path")
+    if isinstance(data.get("ingest"), dict):
+        fix(data["ingest"], "dir")
+        fix(data["ingest"], "archive")
     return data
 
 

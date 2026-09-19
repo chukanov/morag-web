@@ -28,7 +28,13 @@
       "status": "edited",
       "sha256": "9b011da67b8bcf515a5420827f20a2369094f4fc50b4d6d247918c28332e5ac9"
     },
+    "app/api/auth.py": {
+      "status": "ours"
+    },
     "app/api/edits.py": {
+      "status": "ours"
+    },
+    "app/api/ingest.py": {
       "status": "ours"
     },
     "app/api/schemas.py": {
@@ -40,6 +46,30 @@
       "sha256": "dae31ded013f357a2f078f15fbe4b2e9fc56b99913014073c8666d3f98a208a2"
     },
     "app/api/voices.py": {
+      "status": "ours"
+    },
+    "app/auth/__init__.py": {
+      "status": "ours"
+    },
+    "app/auth/ldap.py": {
+      "status": "ours"
+    },
+    "app/auth/local.py": {
+      "status": "ours"
+    },
+    "app/auth/roles.py": {
+      "status": "ours"
+    },
+    "app/auth/service.py": {
+      "status": "ours"
+    },
+    "app/auth/session.py": {
+      "status": "ours"
+    },
+    "app/auth/store.py": {
+      "status": "ours"
+    },
+    "app/auth/throttle.py": {
       "status": "ours"
     },
     "app/chat/__init__.py": {
@@ -72,6 +102,9 @@
     "app/content/frontmatter.py": {
       "status": "verbatim",
       "sha256": "9343b620e82fa48e8e06b954dff6f245fb5673e70a1f0f062f4e95e89d59ce77"
+    },
+    "app/content/ingest.py": {
+      "status": "ours"
     },
     "app/content/rebuild.py": {
       "status": "ours"
@@ -165,6 +198,12 @@
     "tests/js/api-slug.test.mjs": {
       "status": "ours"
     },
+    "tests/js/ask-panel.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/boxfont.test.mjs": {
+      "status": "ours"
+    },
     "tests/js/dialogs.test.mjs": {
       "status": "edited",
       "sha256": "2bc52801f9f9d547659f6d36892a85c69dfc421d9bede3d429ec3ae194817498"
@@ -172,6 +211,9 @@
     "tests/js/gist.test.mjs": {
       "status": "verbatim",
       "sha256": "beab9e221420d110a49555425e89368478f89919d1d5a0875135c1d4857f35c3"
+    },
+    "tests/js/halo.test.mjs": {
+      "status": "ours"
     },
     "tests/js/hub.test.mjs": {
       "status": "ours"
@@ -183,6 +225,12 @@
     "tests/js/karaoke.test.mjs": {
       "status": "edited",
       "sha256": "535285af4dcb1f394970c3d65b40c24d3d2972ad17ba94ef5f98e096e7e02a54"
+    },
+    "tests/js/letter-cloud.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/magnet.test.mjs": {
+      "status": "ours"
     },
     "tests/js/md.test.mjs": {
       "status": "verbatim",
@@ -206,7 +254,16 @@
       "status": "edited",
       "sha256": "a8a4ec88d28dcb4f75bfeb3943b94c4c4d08f949ceea54fc3069dcc40eec5f5d"
     },
+    "tests/js/seek.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/session.test.mjs": {
+      "status": "ours"
+    },
     "tests/js/subs.test.mjs": {
+      "status": "ours"
+    },
+    "tests/js/theme.test.mjs": {
       "status": "ours"
     },
     "tests/js/topic.test.mjs": {
@@ -217,12 +274,27 @@
       "status": "edited",
       "sha256": "55a19167a1c7798e8490c2d9604b82f3be85a08390108d99f2d2b18be15568e7"
     },
+    "tests/requirements.txt": {
+      "status": "ours"
+    },
     "tests/test_ask_api.py": {
+      "status": "ours"
+    },
+    "tests/test_ask_prompt.py": {
+      "status": "ours"
+    },
+    "tests/test_auth.py": {
       "status": "ours"
     },
     "tests/test_brand.py": {
       "status": "edited",
       "sha256": "689ff4323c777f31c2144f28f84e73dc3a9e9138f397e3e36cc5494fc0662202"
+    },
+    "tests/test_classify.py": {
+      "status": "ours"
+    },
+    "tests/test_config_paths.py": {
+      "status": "ours"
     },
     "tests/test_content.py": {
       "status": "edited",
@@ -231,12 +303,27 @@
     "tests/test_corpora_api.py": {
       "status": "ours"
     },
+    "tests/test_demo_template.py": {
+      "status": "ours"
+    },
+    "tests/test_describe_people.py": {
+      "status": "ours"
+    },
     "tests/test_edits_api.py": {
       "status": "ours"
     },
     "tests/test_engine.py": {
       "status": "edited",
       "sha256": "fd2489d1752a9f3108b4f03cc7b3dcb4940a4c9c3be4cf7110686c69a10bfdcd"
+    },
+    "tests/test_favicon.py": {
+      "status": "ours"
+    },
+    "tests/test_ingest.py": {
+      "status": "ours"
+    },
+    "tests/test_intro_frame.py": {
+      "status": "ours"
     },
     "tests/test_journal.py": {
       "status": "verbatim",
@@ -247,6 +334,12 @@
       "sha256": "0f6ba1b13287aabb74ad2ff72a9bf762ba0afb4be953cc494d9adc12f86621f7"
     },
     "tests/test_lineage.py": {
+      "status": "ours"
+    },
+    "tests/test_make_blurb.py": {
+      "status": "ours"
+    },
+    "tests/test_make_cover.py": {
       "status": "ours"
     },
     "tests/test_make_record.py": {
@@ -269,6 +362,9 @@
     "tests/test_video_annotations.py": {
       "status": "ours"
     },
+    "tests/test_video_batch.py": {
+      "status": "ours"
+    },
     "tests/test_video_slides.py": {
       "status": "ours"
     },
@@ -279,7 +375,22 @@
       "status": "edited",
       "sha256": "40e1c7e963cf4b6ff0384bde44c53bd5dd6cee67d8798cb907a09265a6cbb70f"
     },
+    "tools/fetch_audio.py": {
+      "status": "ours"
+    },
+    "tools/intro_frame.py": {
+      "status": "ours"
+    },
     "tools/make_annotations.py": {
+      "status": "ours"
+    },
+    "tools/make_blurb.py": {
+      "status": "ours"
+    },
+    "tools/make_cover.py": {
+      "status": "ours"
+    },
+    "tools/video_batch.py": {
       "status": "ours"
     },
     "web/assets/fonts/mono-cyr-400.woff2": {
@@ -330,6 +441,9 @@
       "status": "edited",
       "sha256": "3af1cf63c98655e4ddb4dc27649cd0eb74189dac3b9ab8db1d0c2540128003a1"
     },
+    "web/js/calendar.js": {
+      "status": "ours"
+    },
     "web/js/chat/controller.js": {
       "status": "edited",
       "sha256": "dc60017b2e4a4fb480861879d095ad4f226a5d1115763e17137d1ad7cd7f7f0b"
@@ -373,7 +487,13 @@
       "status": "edited",
       "sha256": "e18cb68ba97a4f4627fa81fe4930622d3cd3c43869474a01100de322a275181b"
     },
+    "web/js/records/ask-panel.js": {
+      "status": "ours"
+    },
     "web/js/records/filter.js": {
+      "status": "ours"
+    },
+    "web/js/records/letter-cloud.js": {
       "status": "ours"
     },
     "web/js/records/list.js": {
@@ -381,10 +501,16 @@
       "sha256": "8ed4e6d0865274960c49a2db12b9ce9b2eeaa82315ea4cb76544ca89e036bd7b",
       "from": "web/js/episodes/list.js"
     },
+    "web/js/records/magnet.js": {
+      "status": "ours"
+    },
     "web/js/records/reader.js": {
       "status": "edited",
       "sha256": "b936031c7fdbfc7319cadf70fdf31ddbffffc7a8be1bf67b810ae02871174f0c",
       "from": "web/js/episodes/reader.js"
+    },
+    "web/js/records/seek.js": {
+      "status": "ours"
     },
     "web/js/records/subs.js": {
       "status": "ours"
@@ -392,6 +518,12 @@
     "web/js/router.js": {
       "status": "edited",
       "sha256": "5b62fbf548b08fad6102627c555cccdc7010b873810b29dd9795da16a07f03e3"
+    },
+    "web/js/session.js": {
+      "status": "ours"
+    },
+    "web/js/signin.js": {
+      "status": "ours"
     },
     "web/js/sse.js": {
       "status": "verbatim",
@@ -405,13 +537,25 @@
       "status": "edited",
       "sha256": "ef4abf8482a94b3031fee66e293108711fe963d396eee82cc9138a7677cab047"
     },
+    "web/js/ui/boxfont.js": {
+      "status": "ours"
+    },
+    "web/js/ui/brand.js": {
+      "status": "ours"
+    },
     "web/js/ui/dom.js": {
       "status": "edited",
       "sha256": "94d0607531fe76272033d2bb08f5b103e0857360e80a089306e47aa8bac21807"
     },
+    "web/js/ui/halo.js": {
+      "status": "ours"
+    },
     "web/js/ui/karaoke.js": {
       "status": "edited",
       "sha256": "214c669447b8803c99a6a8a39735abe78f3de5915613ba6688d3a995be437097"
+    },
+    "web/js/ui/logo.js": {
+      "status": "ours"
     },
     "web/js/ui/mark.js": {
       "status": "ours"
@@ -429,44 +573,13 @@
       "status": "edited",
       "sha256": "735550c4c9542d01c83f42a7544a66451e91ec6b5ecc262db8be235f33774b54"
     },
+    "web/js/ui/topbar.js": {
+      "status": "ours"
+    },
+    "web/js/ui/user.js": {
+      "status": "ours"
+    },
     "web/js/voices.js": {
-      "status": "ours"
-    },
-    "web/js/calendar.js": {
-      "status": "ours"
-    },
-    "tests/test_classify.py": {
-      "status": "ours"
-    },
-    "web/sw.js": {
-      "status": "verbatim",
-      "sha256": "da2ff832a7560ca6f336273484b536c67cfc535703218739b4aadb2b7d0d953d"
-    },
-    "tools/video_batch.py": {
-      "status": "ours"
-    },
-    "tests/test_video_batch.py": {
-      "status": "ours"
-    },
-    "tools/fetch_audio.py": {
-      "status": "ours"
-    },
-    "web/js/records/seek.js": {
-      "status": "ours"
-    },
-    "tests/js/seek.test.mjs": {
-      "status": "ours"
-    },
-    "tests/js/theme.test.mjs": {
-      "status": "ours"
-    },
-    "tests/js/ask-panel.test.mjs": {
-      "status": "ours"
-    },
-    "web/js/records/ask-panel.js": {
-      "status": "ours"
-    },
-    "web/js/ui/halo.js": {
       "status": "ours"
     },
     "web/lab/halo.html": {
@@ -475,113 +588,9 @@
     "web/lab/halo.js": {
       "status": "ours"
     },
-    "tools/make_cover.py": {
-      "status": "ours"
-    },
-    "tools/make_blurb.py": {
-      "status": "ours"
-    },
-    "tools/intro_frame.py": {
-      "status": "ours"
-    },
-    "tests/test_intro_frame.py": {
-      "status": "ours"
-    },
-    "tests/test_describe_people.py": {
-      "status": "ours"
-    },
-    "tests/test_ask_prompt.py": {
-      "status": "ours"
-    },
-    "tests/test_make_cover.py": {
-      "status": "ours"
-    },
-    "tests/test_make_blurb.py": {
-      "status": "ours"
-    },
-    "web/js/records/letter-cloud.js": {
-      "status": "ours"
-    },
-    "tests/js/letter-cloud.test.mjs": {
-      "status": "ours"
-    },
-    "web/js/records/magnet.js": {
-      "status": "ours"
-    },
-    "tests/js/magnet.test.mjs": {
-      "status": "ours"
-    },
-    "tests/js/halo.test.mjs": {
-      "status": "ours"
-    },
-    "app/api/auth.py": {
-      "status": "ours"
-    },
-    "app/auth/__init__.py": {
-      "status": "ours"
-    },
-    "app/auth/ldap.py": {
-      "status": "ours"
-    },
-    "app/auth/local.py": {
-      "status": "ours"
-    },
-    "app/auth/roles.py": {
-      "status": "ours"
-    },
-    "app/auth/service.py": {
-      "status": "ours"
-    },
-    "app/auth/session.py": {
-      "status": "ours"
-    },
-    "app/auth/store.py": {
-      "status": "ours"
-    },
-    "app/auth/throttle.py": {
-      "status": "ours"
-    },
-    "tests/test_auth.py": {
-      "status": "ours"
-    },
-    "web/js/session.js": {
-      "status": "ours"
-    },
-    "web/js/signin.js": {
-      "status": "ours"
-    },
-    "web/js/ui/user.js": {
-      "status": "ours"
-    },
-    "tests/js/session.test.mjs": {
-      "status": "ours"
-    },
-    "tests/test_favicon.py": {
-      "status": "ours"
-    },
-    "tests/test_config_paths.py": {
-      "status": "ours"
-    },
-    "web/js/ui/boxfont.js": {
-      "status": "ours"
-    },
-    "web/js/ui/brand.js": {
-      "status": "ours"
-    },
-    "web/js/ui/logo.js": {
-      "status": "ours"
-    },
-    "web/js/ui/topbar.js": {
-      "status": "ours"
-    },
-    "tests/js/boxfont.test.mjs": {
-      "status": "ours"
-    },
-    "tests/test_demo_template.py": {
-      "status": "ours"
-    },
-    "tests/requirements.txt": {
-      "status": "ours"
+    "web/sw.js": {
+      "status": "verbatim",
+      "sha256": "da2ff832a7560ca6f336273484b536c67cfc535703218739b4aadb2b7d0d953d"
     }
   }
 }

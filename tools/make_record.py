@@ -259,7 +259,8 @@ def roles_of(body: str, words: dict, meta_json: dict, policy: dict) -> dict:
     if model == "talk":
         source = [s["name"] for s in meta_people if s.get("from") == "calendar"]
         if not source:
-            source = [s["name"] for s in meta_people if s.get("from") in ("owner", "tag", "slide", "post")]
+            # `upload` — докладчики, названные автором при загрузке своей записи (app/content/ingest.py)
+            source = [s["name"] for s in meta_people if s.get("from") in ("owner", "upload", "tag", "slide", "post")]
         if not source:
             source = [v for v in loudest if airtime.get(v, 0.0) / total >= SPEAKER_SHARE]
         for name in source:

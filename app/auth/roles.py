@@ -16,7 +16,8 @@ ROLES = ("viewer", "editor", "admin")
 # «починить везде» (правило словаря на весь корпус); `claim` — «это я»: назвать БЕЗЫМЯННЫЙ
 # голос собой (имя берётся из сессии, сервер отказывает, если голос уже назван) — смысл кнопки в
 # том, что сотрудник сам находит себя в записи, поэтому право у любого вошедшего.
-PERMISSIONS = {"edit": "editor", "voices": "admin", "claim": "editor"}
+# `ingest` — загрузить свою запись (транскрибированную у себя): любой вошедший, как правка реплик.
+PERMISSIONS = {"edit": "editor", "voices": "admin", "claim": "editor", "ingest": "editor"}
 
 
 def rank(role: str | None) -> int:
@@ -86,7 +87,8 @@ def member_of(groups: list[str], patterns: list[str]) -> bool:
     return False
 
 
-def capabilities(role: str | None, editing_enabled: bool) -> dict[str, bool]:
-    """Что может человек с этой ролью. `editing.enabled` — первый рубеж, он старше любой роли:
-    выключенная правка выключена и для админа."""
-    return {name: bool(editing_enabled and allows(role, need)) for name, need in PERMISSIONS.items()}
+def capabilities(role: str | None, editing_enabled: bool, ingest_enabled: bool = False) -> dict[str, bool]:
+    """Что может человек с этой ролью. Флаг включения — первый рубеж, он старше любой роли:
+    выключенная правка выключена и для админа. У загрузки записей флаг свой (`ingest.enabled`)."""
+    flags = {name: (ingest_enabled if name == "ingest" else editing_enabled) for name in PERMISSIONS}
+    return {name: bool(flags[name] and allows(role, need)) for name, need in PERMISSIONS.items()}

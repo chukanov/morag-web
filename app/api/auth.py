@@ -81,7 +81,7 @@ def _me(request: Request) -> dict:
     body = user.public() if user else {"login": None, "name": "", "provider": None, "role": None,
                                         "title": "", "department": "", "photo": False,
                                         "speaker_name": ""}
-    body["can"] = auth.capabilities(request, editing)
+    body["can"] = auth.capabilities(request, editing, request.app.state.cfg.ingest.enabled)
     body["home"] = _home(request)
     return body
 

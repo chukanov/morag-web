@@ -17,9 +17,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 log = logging.getLogger(__name__)
+
+# Задача очереди: пересборка записи (ключ — id, каталог) или произвольная асинхронная работа
+# (ключ — имя, корутина). Одна очередь на оба рода намеренно: приём загруженной записи и её
+# индексация обязаны идти СТРОГО по одной и не пересекаться с пересборками — два индексатора
+# разом делят один счётчик прогонов, а пересборка во время приёма читала бы полуготовый каталог.
+Work = Callable[[], Awaitable[None]]
 
 
 class Rebuilder:
@@ -28,7 +35,7 @@ class Rebuilder:
     def __init__(self, command: list[str], root: Path) -> None:
         self.command = list(command)
         self.root = Path(root)
-        self._queue: asyncio.Queue[tuple[str, Path]] = asyncio.Queue()
+        self._queue: asyncio.Queue[tuple[str, Path | Work]] = asyncio.Queue()
         # ⚠️ Множество ждущих — не украшение: без него запись, у которой поправили три голоса,
         # пересобиралась бы трижды подряд с одним и тем же результатом.
         self._waiting: set[str] = set()
@@ -57,6 +64,18 @@ class Rebuilder:
             added.append(rid)
         return added
 
+    def submit(self, key: str, work: Work) -> bool:
+        """Поставить произвольную работу (приём записи, индексация). Ключ — дедупликация, как у
+        записей: вторая индексация, пока первая ждёт, не нужна. False — уже в очереди/в работе."""
+        if key in self._waiting or key == self._current:
+            return False
+        self._waiting.add(key)
+        self._queue.put_nowait((key, work))
+        return True
+
+    def busy(self, key: str) -> bool:
+        return key in self._waiting or key == self._current
+
     def status(self) -> dict:
         return {
             "pending": len(self._waiting),
@@ -72,6 +91,11 @@ class Rebuilder:
             self._current = rid
             started = time.monotonic()
             try:
+                if callable(directory):
+                    await directory()
+                    self.done += 1
+                    log.info("задача %s выполнена за %.1f с", rid, time.monotonic() - started)
+                    continue
                 argv = [a.format(record_dir=str(directory)) for a in self.command]
                 proc = await asyncio.create_subprocess_exec(
                     *argv, cwd=str(self.root),
@@ -88,7 +112,7 @@ class Rebuilder:
                 raise
             except Exception:
                 self.failed.append(rid)
-                log.exception("пересборка %s сорвалась", rid)
+                log.exception("задача %s сорвалась", rid)
             finally:
                 self._current = ""
                 self._queue.task_done()

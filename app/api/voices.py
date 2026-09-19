@@ -54,6 +54,14 @@ def _guard(request: Request, need: str = "edit") -> None:
     cfg = request.app.state.cfg
     if not cfg.editing.enabled:
         raise HTTPException(403, "правка выключена: включается в app/config.yml, который вне git")
+    require(request, need)
+
+
+def require(request: Request, need: str) -> None:
+    """Третий рубеж сам по себе — КТО: право `need` при включённом входе, иначе петлевой адрес.
+    Общий для правки и для загрузки записей (`api/ingest.py`): у каждой свой флаг включения,
+    а ответ на «кто» один, и править его в двух местах значило бы однажды поправить в одном."""
+    cfg = request.app.state.cfg
     auth = request.app.state.auth
     if auth.enabled:
         user = auth.user_of(request)
