@@ -34,10 +34,16 @@ SIGNIN = "/signin"
 # `leak_check --web`); `/api/health` — liveness для доставки и мониторинга (одни счётчики);
 # `/sw.js` — service worker: скрипт, пришедший редиректом, браузер отвергает.
 PUBLIC_EXACT = frozenset({SIGNIN, "/api/auth/state", "/api/auth/login", "/api/health", "/favicon.svg", "/sw.js"})
-# ⚠️ `/api/ingest/get/` открыт НАМЕРЕННО: там раздача установщика и зеркала, а забирает их
-# `curl` из терминала, у которого cookie сайта нет и быть не должно. Рубежом служит
-# подписанный пропуск в самом адресе — его проверяет ручка (`app/content/dist.py`).
-PUBLIC_PREFIX = ("/js/", "/css/", "/assets/", "/api/ingest/get/")
+# ⚠️ Два пути под `/api/ingest/` открыты ЗДЕСЬ намеренно — у обоих свой рубеж в самой ручке,
+# потому что клиент у них не браузер и cookie он не носит:
+#   `get/`  — раздача установщика и зеркала: забирает `curl` из терминала, рубеж — подписанный
+#             пропуск в адресе (`app/content/dist.py`);
+#   `llm/`  — шлюз LLM для расшифровки на чужом маке: ходит стек транскрибации, он умеет только
+#             `Authorization: Bearer <строка>`, и строкой служит ТА ЖЕ сессия сайта
+#             (`app/api/llm.py` разбирает её и зовёт общий гейт `require`).
+# ⓘ Пускать сессию заголовком ВЕЗДЕ было бы проще, но это тихо расширило бы каждую ручку API;
+# здесь же расширены ровно две, и у обеих это записано.
+PUBLIC_PREFIX = ("/js/", "/css/", "/assets/", "/api/ingest/get/", "/api/ingest/llm/")
 NO_STORE = {"Cache-Control": "no-store"}
 # Корень подписи на время процесса — когда вход выключен и постоянного ключа нет вовсе.
 _EPHEMERAL = secrets.token_bytes(32)
@@ -176,6 +182,24 @@ class AuthService:
 
     # --- кто в запросе ----------------------------------------------------------
 
+    def session_user(self, value: str | None) -> tuple[dict, Identity] | None:
+        """Личность по СТРОКЕ сессии — то же, что по cookie, но строку даёт зовущий.
+
+        Нужна ровно одному месту помимо cookie — прокси к LLM-шлюзу (`app/api/llm.py`): стек
+        транскрибации на чужом маке умеет только `Authorization: Bearer <строка>`, и этой
+        строкой служит та же сессия сайта. Отсюда «работает, пока человек залогинен»: снимок
+        удалили — доступа нет, из группы убрали — нет, срок вышел — нет, и всё это даром.
+        """
+        payload = session.verify(value, self._secret)
+        if not payload:
+            return None
+        snapshot = self.store.load(payload["prv"], payload["sub"])
+        if snapshot is None:
+            return None  # снимок удалён = сессия отозвана
+        if not self.allowed(snapshot):
+            return None  # правило доступа ужесточили — чужая сессия кончается на первом запросе
+        return payload, self.identity_of(snapshot)
+
     def user_of(self, request: Request) -> Identity | None:
         """Личность по cookie или None. Результат кладётся в `request.state.user`, чтобы ручки
         не разбирали cookie по второму разу."""
@@ -184,16 +208,11 @@ class AuthService:
         cached = getattr(request.state, "user", None)
         if cached is not None:
             return cached
-        payload = session.verify(request.cookies.get(self.cfg.cookie_name), self._secret)
-        if not payload:
+        found = self.session_user(request.cookies.get(self.cfg.cookie_name))
+        if found is None:
             return None
-        snapshot = self.store.load(payload["prv"], payload["sub"])
-        if snapshot is None:
-            return None  # снимок удалён = сессия отозвана
-        if not self.allowed(snapshot):
-            return None  # правило доступа ужесточили — чужая сессия кончается на первом запросе
+        payload, identity = found
         request.state.session = payload
-        identity = self.identity_of(snapshot)
         request.state.user = identity
         return identity
 

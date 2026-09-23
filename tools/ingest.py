@@ -84,6 +84,56 @@ def say(msg: str) -> None:
     del LOG[:-400]
 
 
+# --- файл стека ----------------------------------------------------------------------------
+
+# Путь ручки сайта, через которую стадии с LLM ходят в корпоративный шлюз (`app/api/llm.py`):
+# сервер называет его сам в `/api/ingest/options`, здесь — запасное значение.
+SITE_LLM_PATH = "/api/ingest/llm"
+
+def stack_env_path() -> Path:
+    """Файл стека — ПО ЗОВУ, а не по импорту: окружение приложению задаёт запускатор, а тесты
+    и терминал подменяют его на ходу; константа, прочитанная при импорте, писала бы не туда."""
+    return Path(os.environ.get("ASR_STACK_ENV") or STACK_ENV).expanduser()
+
+
+def set_stack_env(**values: str) -> Path:
+    """Вписать значения в файл стека (0600), заполняя СУЩЕСТВУЮЩИЕ строки, а не дописывая.
+
+    ⚠️ Два присваивания одного имени в одном файле — классическая тихая беда: побеждает
+    последнее, и правка верхней строки ни на что не влияет (ловилось в установщике морага).
+    ⚠️ Файл читает АДАПТЕР при старте: вписанное на ходу подхватится только после перезапуска
+    стека — гасить его должен зовущий.
+    """
+    path = stack_env_path()
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    for name, value in values.items():
+        for i, line in enumerate(lines):
+            if line.strip().removeprefix("export ").split("=", 1)[0].strip() == name:
+                lines[i] = f"{name}={value}"
+                break
+        else:
+            lines.append(f"{name}={value}")
+        os.environ[name] = value
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.chmod(0o600)
+    return path
+
+
+def stack_env_value(name: str) -> str:
+    """Значение из окружения, иначе из файла стека."""
+    if os.environ.get(name):
+        return os.environ[name]
+    path = stack_env_path()
+    if not path.is_file():
+        return ""
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, _, value = line.strip().removeprefix("export ").partition("=")
+        if key.strip() == name:
+            return value.strip().strip('"').strip("'")
+    return ""
+
+
 # --- сессия сайта --------------------------------------------------------------------------
 
 def load_session(site: str | None) -> tuple[str, dict[str, str]]:
@@ -133,7 +183,43 @@ def cmd_login(args: argparse.Namespace) -> int:
         me = r.json()
     save_session(site, cookies)
     say(f"вошли как {me.get('name') or login} ({me.get('role')}), сессия — {SESSION}")
+    # Ключ к шлюзу спрашивать не надо: сайт умеет ходить туда за нас этой же сессией.
+    try:
+        out = use_site_llm()
+        say("стадии с ИИ пойдут через сайт — ключ не нужен" if out.get("via_site")
+            else "сайт не ходит в шлюз за вас: впишите свой ключ в OR_KEY файла стека")
+    except Step as error:
+        say(f"шлюз через сайт не настроился ({error}) — можно вписать свой ключ в OR_KEY")
     return 0
+
+
+def use_site_llm() -> dict:
+    """Ключ не спрашиваем: пусть стадии с LLM ходят в шлюз ЧЕРЕЗ САЙТ, а удостоверением служит
+    та же сессия, которой человек только что вошёл.
+
+    Что кладём в файл стека: адрес ручки сайта, модель (её называет сервер) и строку сессии как
+    `OR_KEY` — стек умеет только `Authorization: Bearer <строка>`, и этого достаточно. Ключ
+    корпоративного шлюза остаётся на сервере; здесь его нет вовсе.
+    """
+    site, cookies = load_session(None)
+    with client(site, cookies, timeout=20) as c:
+        r = c.get("/api/ingest/options")
+        if r.status_code != 200:
+            raise Step(f"сайт не ответил про загрузку ({r.status_code}) — войдите заново")
+        llm = (r.json() or {}).get("llm") or {}
+        if not llm.get("via_site"):
+            return {"via_site": False}
+        name = llm.get("cookie") or ""
+        token = cookies.get(name) or (next(iter(cookies.values())) if len(cookies) == 1 else "")
+        if not token:
+            raise Step("не нашёл сессию сайта — войдите заново")
+        set_stack_env(ASR_LLM_BASE_URL=site + llm.get("path", SITE_LLM_PATH),
+                      ASR_LLM_MODEL=llm.get("model") or "", OR_KEY=token)
+        checked = c.get(f"{llm.get('path', SITE_LLM_PATH)}/models",
+                        headers={"Authorization": f"Bearer {token}"}).status_code == 200
+    if stack_health():
+        stack("down")   # адаптер читает файл при старте
+    return {"via_site": True, "checked": checked}
 
 
 # --- шаг 1: транскрибация ------------------------------------------------------------------

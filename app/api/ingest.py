@@ -50,11 +50,23 @@ def _refused(error: core.Refused) -> HTTPException:
 
 @router.get("/options")
 async def options(request: Request) -> dict:
-    """Что подставлять в манифест: допустимые рубрики (из правил раскладки), потолки."""
+    """Что подставлять в манифест: допустимые рубрики (из правил раскладки), потолки, шлюз.
+
+    Блок `llm` — ответ на «где взять ключ»: нигде. Если сайт готов ходить в шлюз за коллегу
+    (`app/api/llm.py`), он говорит приложению путь, модель и имя своей cookie — приложение
+    кладёт их в файл стека, и удостоверением служит уже открытая сессия. Ключа нет ни у
+    человека, ни в приложении.
+    """
     staging = _staging(request)
-    cfg = request.app.state.cfg.ingest
+    app_cfg = request.app.state.cfg
+    cfg = app_cfg.ingest
+    gateway = core.llm_env_of(request.app.state)
+    llm = {"via_site": bool(cfg.llm.enabled and gateway),
+           "path": "/api/ingest/llm",
+           "model": gateway.get("ASR_LLM_MODEL", "") if gateway else "",
+           "cookie": app_cfg.auth.cookie_name if app_cfg.auth.enabled else ""}
     return {"events": core.events_of(staging.family), "video_ext": list(core.VIDEO_EXT),
-            "max_gb": cfg.max_gb, "files": list(core.FILES)}
+            "max_gb": cfg.max_gb, "files": list(core.FILES), "llm": llm}
 
 
 @router.post("")

@@ -37,6 +37,9 @@
     "app/api/ingest.py": {
       "status": "ours"
     },
+    "app/api/llm.py": {
+      "status": "ours"
+    },
     "app/api/schemas.py": {
       "status": "edited",
       "sha256": "5a180b75d7e538d5c79df22afe4a815dcb9af6b0826c771840e936489afd43ae"
@@ -349,6 +352,9 @@
       "sha256": "0f6ba1b13287aabb74ad2ff72a9bf762ba0afb4be953cc494d9adc12f86621f7"
     },
     "tests/test_lineage.py": {
+      "status": "ours"
+    },
+    "tests/test_llm_proxy.py": {
       "status": "ours"
     },
     "tests/test_make_blurb.py": {

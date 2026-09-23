@@ -30,6 +30,9 @@ from urllib.parse import parse_qs, urlparse
 
 import ingest
 
+# Признак «ходим в шлюз через сайт» — путь его ручки (`app/api/llm.py`).
+SITE_LLM_PATH = ingest.SITE_LLM_PATH
+
 HERE = Path(__file__).resolve().parent
 PAGE = HERE / "ingest-ui.html"
 # Где искать видео: обычные папки Mac плюс то, что укажут переменной. Глубина — два уровня:
@@ -86,47 +89,35 @@ def site_state() -> dict:
     return out
 
 
-def gateway_key() -> str:
-    """Ключ шлюза, как его видят стек и инструменты: окружение, иначе файл стека."""
-    if os.environ.get("OR_KEY"):
-        return os.environ["OR_KEY"]
-    path = Path(os.environ.get("ASR_STACK_ENV") or (Path.home() / ".asr-stack.env")).expanduser()
-    if not path.is_file():
-        return ""
-    for line in path.read_text(encoding="utf-8").splitlines():
-        name, _, value = line.strip().removeprefix("export ").partition("=")
-        if name.strip() == "OR_KEY":
-            return value.strip().strip('"').strip("'")
-    return ""
+def llm_state() -> dict:
+    """Чем стек ходит в шлюз: через сайт (сессией), своим ключом — или ничем.
+
+    ⚠️ «Через сайт» узнаём по адресу, а не по флагу в своём файле: флаг разъехался бы с тем,
+    что на самом деле написано в окружении стека, и приложение врало бы про готовность.
+    """
+    base = ingest.stack_env_value("ASR_LLM_BASE_URL")
+    key = ingest.stack_env_value("OR_KEY")
+    return {"ready": bool(base and key), "via_site": base.endswith(SITE_LLM_PATH), "base": base}
 
 
 def save_key(key: str) -> dict:
-    """Записать ключ в файл стека (0600) и проверить его одним коротким запросом к шлюзу.
+    """Запасной ход: свой ключ к шлюзу (кто гоняет стек без сайта или хочет свой расход).
 
-    ⚠️ Файл читает АДАПТЕР при старте: ключ, вписанный на ходу, подхватится только после
-    перезапуска стека — поэтому гасим его здесь же, следующий прогон поднимет заново.
+    ⚠️ Вместе с ключом возвращаем и АДРЕС самого шлюза: если до этого стек ходил через сайт,
+    в окружении лежит наш путь, и чужой ключ к нему не подойдёт — вышло бы «ключ вписан, а
+    ничего не работает». Адрес берём из настроек корпуса, привезённых установщиком.
     """
     key = key.strip()
     if not key:
         raise ingest.Step("пустой ключ")
-    path = Path(os.environ.get("ASR_STACK_ENV") or (Path.home() / ".asr-stack.env")).expanduser()
-    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
-    for i, line in enumerate(lines):
-        if line.strip().removeprefix("export ").startswith("OR_KEY="):
-            lines[i] = f"OR_KEY={key}"
-            break
-    else:
-        lines.append(f"OR_KEY={key}")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    path.chmod(0o600)
-    os.environ["OR_KEY"] = key
+    values = {"OR_KEY": key}
+    base = ingest.stack_env_value("ASR_LLM_BASE_URL")
+    direct = gateway_from_mirror()
+    if direct and base.endswith(SITE_LLM_PATH):
+        values["ASR_LLM_BASE_URL"] = direct
+    ingest.set_stack_env(**values)
     checked = False
-    base = os.environ.get("ASR_LLM_BASE_URL") or ""
-    if not base and path.is_file():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            name, _, value = line.strip().removeprefix("export ").partition("=")
-            if name.strip() == "ASR_LLM_BASE_URL":
-                base = value.strip().strip('"').strip("'")
+    base = values.get("ASR_LLM_BASE_URL", base)
     if base:
         try:
             with ingest.client(base, {}, timeout=15) as c:
@@ -134,8 +125,21 @@ def save_key(key: str) -> dict:
         except Exception:  # noqa: BLE001 — шлюз недоступен: ключ всё равно сохранён
             checked = False
     if ingest.stack_health():
-        ingest.stack("down")   # чтобы адаптер перечитал ключ при следующем подъёме
+        ingest.stack("down")
     return {"ok": True, "checked": checked}
+
+
+def gateway_from_mirror() -> str:
+    """Адрес корпоративного шлюза, привезённый установщиком (`~/morag-ingest/gateway.env`).
+    Нужен только запасному ходу «у меня свой ключ»."""
+    path = Path(os.environ.get("MORAG_INGEST_HOME") or (Path.home() / "morag-ingest")) / "gateway.env"
+    if not path.is_file():
+        return ""
+    for line in path.read_text(encoding="utf-8").splitlines():
+        name, _, value = line.strip().removeprefix("export ").partition("=")
+        if name.strip() == "ASR_LLM_BASE_URL":
+            return value.strip().strip('"').strip("'")
+    return ""
 
 
 def start(fields: dict) -> dict:
@@ -219,7 +223,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if url.path == "/api/state":
             self._json({"job": dict(STATE), "log": ingest.LOG[-200:], "stack": bool(ingest.stack_health()),
-                        "site": site_state(), "videos": videos(), "key": bool(gateway_key()),
+                        "site": site_state(), "videos": videos(), "llm": llm_state(),
                         "home": str(ingest.HOME), "ext": list(ingest.VIDEO_EXT)})
             return
         self._json({"error": "нет такого"}, 404)
@@ -244,7 +248,12 @@ class Handler(BaseHTTPRequestHandler):
                         self._json({"error": r.json().get("detail", f"вход не удался ({r.status_code})")}, 400)
                         return
                     ingest.save_session(site, {k: v for k, v in c.cookies.items()})
-                self._json({"ok": True})
+                # Вошли — значит ключ больше не нужен: стадии с LLM пойдут через сайт этой же
+                # сессией. Не получилось (сайт так не умеет) — не беда, скажем в настройках.
+                try:
+                    self._json({"ok": True, "llm": ingest.use_site_llm()})
+                except ingest.Step as error:
+                    self._json({"ok": True, "llm": {"via_site": False, "error": str(error)}})
                 return
             if url.path == "/api/start":
                 self._json(start(body))
@@ -252,6 +261,9 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/stack":
                 ingest.stack("up" if body.get("up") else "down")
                 self._json({"ok": True})
+                return
+            if url.path == "/api/llm":
+                self._json(ingest.use_site_llm())
                 return
             if url.path == "/api/key":
                 self._json(save_key(str(body.get("key") or "")))

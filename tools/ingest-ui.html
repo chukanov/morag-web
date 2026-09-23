@@ -146,12 +146,21 @@
   <section>
     <details id="settings">
       <summary>Настройки и состояние</summary>
-      <label style="margin-top:10px">Ваш ключ к LLM-шлюзу
-        <input id="key" type="password" placeholder="ключ из личного кабинета шлюза">
-      </label>
+      <!-- Ключ к шлюзу не спрашиваем: стадии с ИИ ходят через сайт этой же сессией
+           (app/api/llm.py). Поле остаётся запасным ходом — для своего ключа. -->
+      <p class="msg" id="llm-msg" style="margin-top:10px"></p>
       <div class="line" style="margin-bottom:12px">
-        <button id="save-key" class="ghost">Сохранить ключ</button>
-        <span id="key-msg" class="msg"></span>
+        <button id="llm-site" class="ghost" hidden>Ходить через сайт</button>
+        <button id="llm-own" class="ghost">У меня свой ключ</button>
+      </div>
+      <div id="key-box" hidden>
+        <label>Ваш ключ к LLM-шлюзу
+          <input id="key" type="password" placeholder="ключ из личного кабинета шлюза">
+        </label>
+        <div class="line" style="margin-bottom:12px">
+          <button id="save-key" class="ghost">Сохранить ключ</button>
+          <span id="key-msg" class="msg"></span>
+        </div>
       </div>
       <p class="msg" id="env"></p>
     </details>
@@ -327,12 +336,30 @@ async function tick() {
   $("env").innerHTML = [
     site.site ? `сайт ${site.site}${site.who ? ` — ${site.who}` : ""}` : "сайт не выбран",
     s.stack ? '<span class="ok">стек транскрибации поднят</span>' : "стек погашен — поднимется сам",
-    s.key ? "ключ шлюза задан" : '<span class="bad">ключ шлюза не задан</span>',
+    llmLine(s.llm),
     `рабочая папка ${s.home}`,
     site.error ? `<span class="bad">сайт не отвечает: ${site.error}</span>` : "",
     site.note ? `<span class="bad">${site.note}</span>` : "",
   ].filter(Boolean).join(" · ");
-  if (!s.key && !$("settings").open && job.stage === "idle") $("settings").open = true;
+  // Настройки сами раскрываются только если ходить в шлюз нечем: это единственное, что человек
+  // обязан сделать руками, — и то лишь когда сайт не умеет ходить за него.
+  if (!s.llm?.ready && !$("settings").open && job.stage === "idle") $("settings").open = true;
+  $("llm-site").hidden = !!s.llm?.via_site;
+  $("llm-own").hidden = !s.llm?.via_site;
+  if (!$("llm-msg").dataset.touched) {
+    $("llm-msg").textContent = s.llm?.via_site
+      ? "Ключ не нужен: стадии с ИИ идут через сайт, от вашего имени. Работает, пока вы залогинены."
+      : (s.llm?.ready ? "Стадии с ИИ идут вашим ключом напрямую в шлюз."
+                      : "Войдите на сайт — и ключ не понадобится: ИИ-стадии пойдут через него.");
+  }
+}
+
+/** Чем ходим в шлюз — одной строкой в состоянии. */
+function llmLine(llm) {
+  if (!llm) return "";
+  if (llm.via_site) return "ИИ-стадии через сайт (ключ не нужен)";
+  if (llm.ready) return "ИИ-стадии своим ключом";
+  return '<span class="bad">ИИ-стадии некуда отправить: войдите на сайт</span>';
 }
 
 $("do-login").onclick = async () => {
@@ -345,6 +372,22 @@ $("do-login").onclick = async () => {
     $("login-msg").textContent = "";
     await tick();
   } catch (e) { $("login-msg").textContent = e.message; $("login-msg").className = "msg bad"; }
+};
+
+$("llm-own").onclick = () => { $("key-box").hidden = false; $("key").focus(); };
+$("llm-site").onclick = async () => {
+  const msg = $("llm-msg");
+  msg.dataset.touched = "1";
+  msg.textContent = "настраиваю…";
+  msg.className = "msg";
+  try {
+    const r = await api("/api/llm", {});
+    msg.textContent = r.via_site
+      ? (r.checked ? "Готово: ИИ-стадии идут через сайт." : "Настроено, но сайт не ответил на проверку.")
+      : "Этот сайт не умеет ходить в шлюз за вас — нужен свой ключ.";
+    msg.className = r.via_site ? "msg ok" : "msg bad";
+    $("key-box").hidden = !!r.via_site;
+  } catch (e) { msg.textContent = e.message; msg.className = "msg bad"; }
 };
 
 $("save-key").onclick = async () => {

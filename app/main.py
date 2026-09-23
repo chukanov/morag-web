@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import logging as applog
 from . import meta as ogmeta
-from .api import ask, auth as auth_api, edits, ingest as ingest_api, site, voices
+from .api import ask, auth as auth_api, edits, ingest as ingest_api, llm as llm_api, site, voices
 from .auth import AuthService, gate as auth_gate
 from .chat.topic import TopicMaker
 from .config import APP_DIR, PRODUCT, _inside, engine_for, family_dir, load_config, load_corpora
@@ -157,6 +157,8 @@ def create_app() -> FastAPI:
     app.include_router(voices.router)
     app.include_router(edits.router)
     app.include_router(ingest_api.router)
+    # Шлюз LLM для расшифровки на чужом маке — под приёмом записи и его правом.
+    app.include_router(llm_api.router)
     app.include_router(auth_api.router)
     # Рубеж входа — ВСЕГДА, вне зависимости от статики: при выключенной авторизации пропускает
     # всё как есть. Стоит до роутинга, статики и SPA-заглушки (Starlette собирает middleware

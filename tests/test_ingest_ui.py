@@ -158,31 +158,76 @@ def test_failure_is_shown_not_swallowed(server, monkeypatch):
     assert job["stage"] == "error" and "не отвечает" in job["error"]
 
 
-# --- ключ шлюза, сброс и окно ---------------------------------------------------------
+# --- чем ходим в шлюз, сброс и окно ----------------------------------------------------
 
-def test_key_is_saved_to_the_stack_env_with_owner_only_rights(server, tmp_path, monkeypatch):
-    """Ключ вводят в окне, а читает его стек — значит писать надо в его env-файл, и только для
-    себя (0600). ⚠️ Адаптер читает файл при старте, поэтому поднятый стек гасим: иначе новый
-    ключ подхватится «когда-нибудь», и человек решит, что кнопка не работает."""
+def test_site_session_becomes_the_gateway_credential(server, tmp_path, monkeypatch):
+    """Ключ у человека не спрашиваем вовсе: вошёл на сайт — стадии с ИИ идут ЧЕРЕЗ сайт, а
+    удостоверением служит та же сессия. В файл стека уезжают адрес ручки, модель и строка
+    сессии; поднятый стек гасим — адаптер читает файл при старте."""
     base, tmp = server
     env_file = tmp / "asr.env"
-    env_file.write_text("ASR_LLM_BASE_URL=https://llm.example.org/api\nOR_KEY=старый\n", encoding="utf-8")
+    env_file.write_text("ASR_LLM_BASE_URL=https://llm.example.org/api\nOR_KEY=\n", encoding="utf-8")
     monkeypatch.setenv("ASR_STACK_ENV", str(env_file))
-    monkeypatch.delenv("OR_KEY", raising=False)
+    for name in ("OR_KEY", "ASR_LLM_BASE_URL", "ASR_LLM_MODEL"):
+        monkeypatch.delenv(name, raising=False)
     stack_calls: list[str] = []
     monkeypatch.setattr(ingest, "stack", lambda cmd: stack_calls.append(cmd))
     monkeypatch.setattr(ingest, "stack_health", lambda: {"status": "ok"})
+    monkeypatch.setattr(ingest, "load_session",
+                        lambda site: ("https://site.example.org", {"morag_session": "eyJzdWIi.c2lnbg"}))
 
-    code, body = post(f"{base}/api/key?t=tok", {"key": "  новый-ключ  "})
+    import httpx
+
+    seen: dict = {}
+
+    def fake(request: httpx.Request) -> httpx.Response:
+        seen[request.url.path] = dict(request.headers)
+        if request.url.path == "/api/ingest/options":
+            return httpx.Response(200, json={"events": [], "llm": {"via_site": True, "path": "/api/ingest/llm",
+                                                                   "model": "Instruct", "cookie": "morag_session"}})
+        return httpx.Response(200, json={"data": []})
+
+    monkeypatch.setattr(ingest, "TRANSPORT", httpx.MockTransport(fake))
+    code, body = post(f"{base}/api/llm?t=tok", {})
+    assert code == 200 and body == {"via_site": True, "checked": True}
+
+    text = env_file.read_text(encoding="utf-8")
+    assert "OR_KEY=eyJzdWIi.c2lnbg" in text, "удостоверение — сама сессия сайта"
+    assert "ASR_LLM_BASE_URL=https://site.example.org/api/ingest/llm" in text
+    assert "ASR_LLM_MODEL=Instruct" in text
+    assert oct(env_file.stat().st_mode & 0o777) == "0o600"
+    assert stack_calls == ["down"]
+    assert seen["/api/ingest/llm/models"]["authorization"] == "Bearer eyJzdWIi.c2lnbg", "проверка тем же удостоверением"
+    assert ingest_ui.llm_state() == {"ready": True, "via_site": True,
+                                    "base": "https://site.example.org/api/ingest/llm"}
+    assert get(f"{base}/api/state?t=tok")[1]["llm"]["via_site"] is True
+
+
+def test_own_key_stays_as_a_fallback_and_restores_the_direct_address(server, tmp_path, monkeypatch):
+    """Запасной ход для тех, кто гоняет стек без сайта. ⚠️ Вместе с ключом возвращаем и адрес
+    САМОГО шлюза: если до этого ходили через сайт, чужой ключ к нашей ручке не подошёл бы, и
+    вышло бы «ключ вписан, а ничего не работает»."""
+    base, tmp = server
+    env_file = tmp / "asr.env"
+    env_file.write_text("ASR_LLM_BASE_URL=https://site.example.org/api/ingest/llm\nOR_KEY=eyJzdWIi.c2lnbg\n",
+                        encoding="utf-8")
+    monkeypatch.setenv("ASR_STACK_ENV", str(env_file))
+    for name in ("OR_KEY", "ASR_LLM_BASE_URL"):
+        monkeypatch.delenv(name, raising=False)
+    home = tmp / "morag-ingest"
+    home.mkdir()
+    (home / "gateway.env").write_text("ASR_LLM_BASE_URL=https://llm.example.org/api\n", encoding="utf-8")
+    monkeypatch.setenv("MORAG_INGEST_HOME", str(home))
+    monkeypatch.setattr(ingest, "stack", lambda cmd: None)
+    monkeypatch.setattr(ingest, "stack_health", lambda: None)
+
+    code, body = post(f"{base}/api/key?t=tok", {"key": "  свой-ключ  "})
     assert code == 200 and body["ok"] is True
     text = env_file.read_text(encoding="utf-8")
-    assert "OR_KEY=новый-ключ" in text and "старый" not in text, "ключ заменён, а не дописан вторым"
-    assert text.count("OR_KEY=") == 1
-    assert oct(env_file.stat().st_mode & 0o777) == "0o600"
-    assert stack_calls == ["down"], "стек погашен, чтобы перечитать ключ при следующем подъёме"
-    assert ingest_ui.gateway_key() == "новый-ключ"
-    assert get(f"{base}/api/state?t=tok")[1]["key"] is True
-
+    assert "OR_KEY=свой-ключ" in text and "eyJzdWIi" not in text
+    assert "ASR_LLM_BASE_URL=https://llm.example.org/api" in text, "адрес вернулся на сам шлюз"
+    assert text.count("OR_KEY=") == 1 and text.count("ASR_LLM_BASE_URL=") == 1
+    assert ingest_ui.llm_state()["via_site"] is False
     assert post(f"{base}/api/key?t=tok", {"key": "   "})[0] == 400, "пустой ключ не принимаем"
 
 
