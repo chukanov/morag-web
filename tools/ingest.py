@@ -46,6 +46,18 @@ try:
 except ImportError:  # pragma: no cover — подсказка вместо трейсбека
     sys.exit("нужен httpx: ~/asr-stack/video-venv/bin/python tools/ingest.py … (или pip install httpx)")
 
+# ⚠️ Сертификат корпоративного сайта подписан ВНУТРЕННИМ центром сертификации, а httpx носит с
+# собой только публичные корни: без этого вход отвечает `CERTIFICATE_VERIFY_FAILED`, и выглядит
+# это как «приложение не видит сайт» (ловилось на живой установке 23.09). `truststore` отдаёт
+# проверку тому же хранилищу, которым пользуются Safari и системный curl. Нет пакета — работаем
+# как раньше: в установке с зеркала то же самое делает `SSL_CERT_FILE` в окружении.
+try:
+    import truststore
+
+    truststore.inject_into_ssl()
+except Exception:  # noqa: BLE001 — не мак, старый питон, пакета нет: не повод падать
+    pass
+
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
@@ -163,7 +175,11 @@ TRANSPORT: httpx.BaseTransport | None = None   # тесты подменяют �
 
 
 def client(site: str, cookies: dict[str, str], timeout=60.0) -> httpx.Client:
-    return httpx.Client(base_url=site, cookies=cookies, timeout=timeout, follow_redirects=False, transport=TRANSPORT)
+    """⚠️ `trust_env=False`: прокси из окружения нам только мешает. Сайт и стек — внутри
+    периметра, а корпоративный прокси отвечает на них 503/407; ловилось в терминале, где
+    переменные прокси заданы профилем оболочки (у приложения из Finder их нет вовсе)."""
+    return httpx.Client(base_url=site, cookies=cookies, timeout=timeout, follow_redirects=False,
+                        trust_env=False, transport=TRANSPORT)
 
 
 def cmd_login(args: argparse.Namespace) -> int:

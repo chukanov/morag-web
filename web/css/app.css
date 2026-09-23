@@ -1402,6 +1402,8 @@ body[data-view="chat"] .chat-tools{display:flex}
   background:var(--accent-fill);color:var(--accent-ink);font-weight:600;font-size:14px;
   text-decoration:none;cursor:pointer;transition:filter .15s}
 .ing-get:hover{filter:brightness(1.08)}
+.ing-get.ghost{background:transparent;color:var(--ink-dim);border:1px solid var(--line);font-weight:500}
+.ing-get.ghost:hover{color:var(--accent);border-color:var(--accent)}
 .ing-or{margin-top:10px}
 /* Команду копируют целиком, поэтому она не переносится по словам, а прокручивается: разорванная
    по пробелу строка при копировании из выделения приезжает в терминал с переводом строки. */

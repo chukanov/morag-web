@@ -43,7 +43,13 @@ step() { printf '\n\033[1m[%s/%s] %s\033[0m\n' "$1" "$STEPS" "$2"; }
 step 1 "проверяю машину"
 [ "$(uname -s)" = Darwin ] || die "это установщик для macOS"
 [ "$(uname -m)" = arm64 ] || die "нужен Mac на Apple Silicon (M1 и новее): на Intel модели не пойдут"
-command -v curl >/dev/null 2>&1 || die "нет curl"
+# ⚠️ Системный curl, а не первый из PATH. Сертификат сайта подписан внутренним центром
+# сертификации компании: `/usr/bin/curl` верит связке ключей машины (там корпоративный корень
+# есть), а curl из conda/brew носит с собой публичные корни и отвечает «unable to get local
+# issuer certificate» — ловилось на первой же живой установке.
+CURL=/usr/bin/curl
+[ -x "$CURL" ] || CURL=$(command -v curl || true)
+[ -n "$CURL" ] || die "нет curl"
 command -v shasum >/dev/null 2>&1 || die "нет shasum"
 FREE_GB=$(df -g "$HOME" | awk 'NR==2 {print $4}')
 [ "${FREE_GB:-0}" -ge "$NEED_GB" ] || die "на диске ${FREE_GB} ГБ, нужно хотя бы $NEED_GB ГБ"
@@ -55,7 +61,7 @@ mkdir -p "$DIST" "$ROOT/bin" "$STACK"
 # Опись читается СТРОКАМИ, а не как JSON: питона на чистом маке нет (системный `python3` —
 # заглушка, которая просит поставить Xcode), и разбирать JSON тут нечем и незачем.
 step 2 "опись зеркала"
-curl -fsSL --retry 3 "$API/file/manifest.sh" -o "$DIST/manifest.sh" \
+"$CURL" -fsSL --retry 3 "$API/file/manifest.sh" -o "$DIST/manifest.sh" \
   || die "сайт не отдал опись зеркала. Ссылка на установку живёт неделю — если она старая, откройте страницу загрузки заново"
 TOTAL=$(awk -F'|' '$1 !~ /^#/ && NF>=4 {s+=$4} END {printf "%.1f", s/1073741824}' "$DIST/manifest.sh")
 ok "собрано ${BUILT:-—}, скачать ${TOTAL} ГБ (повторный запуск — только недостающее)"
@@ -68,7 +74,7 @@ fetch() {                       # fetch <имя> <байт> <sha256> <подпи
     ok "$title — уже скачано"; return 0
   fi
   printf '  %s (%s МБ)\n' "$title" "$((size / 1048576))"
-  curl -fL --retry 5 --retry-delay 2 --progress-bar -C - -o "$path" "$API/file/$name" \
+  "$CURL" -fL --retry 5 --retry-delay 2 --progress-bar -C - -o "$path" "$API/file/$name" \
     || die "не скачалось: $title. Проверьте сеть и запустите команду снова — докачает"
   got=$(shasum -a 256 "$path" | cut -d' ' -f1)
   [ "$got" = "$sum" ] || { rm -f "$path"; die "$title скачался битым — запустите установку снова"; }
@@ -166,12 +172,34 @@ retry_pip "$VIDEO/bin/pip" install -q -r "$ROOT/web/tools/requirements-video.txt
                                     -r "$ROOT/web/tools/requirements-app.txt"
 ok "окружения готовы"
 
+# ⚠️⚠️ Сертификат сайта подписан ВНУТРЕННИМ центром сертификации компании, а питон (httpx, pip) и
+# не-системный curl носят с собой только публичные корни (certifi) — такому сертификату они не
+# верят вовсе: `CERTIFICATE_VERIFY_FAILED`. Снаружи это выглядит как «приложение не может войти
+# на сайт», и причина неочевидна. Берём то, чему верит САМА МАШИНА (системная связка ключей —
+# на корпоративном маке корпоративные корни там есть), подклеиваем к публичным и говорим про эту
+# связку всем процессам разом: наши инструменты, стек транскрибации и pip читают `SSL_CERT_FILE`.
+CA="$ROOT/ca-bundle.pem"
+export CA
+"$VIDEO/bin/python" -c 'import certifi,sys; sys.stdout.write(open(certifi.where()).read())' > "$CA"
+security find-certificate -a -p /Library/Keychains/System.keychain >> "$CA" 2>/dev/null || true
+setenv SSL_CERT_FILE "$CA"
+setenv REQUESTS_CA_BUNDLE "$CA"
+if "$VIDEO/bin/python" -c "import ssl,urllib.request,os,sys
+ctx = ssl.create_default_context(cafile=os.environ['CA'])
+urllib.request.urlopen('$SITE/api/health', context=ctx, timeout=20).read()" 2>/dev/null; then
+  ok "сертификат сайта проверяется ($(grep -c 'BEGIN CERT' "$CA") корней)"
+else
+  warn "сертификат сайта не проверяется по корням этой машины — вход из приложения может не пройти;"
+  warn "покажите это админам: на маке нет корпоративного корневого сертификата"
+fi
+
 # --- 7. команда и приложение -------------------------------------------------------------
 step 7 "приложение"
 cat > "$ROOT/bin/morag-ingest" <<EOF
 #!/bin/sh
 # То же самое из терминала: morag-ingest ui | app | run видео.mp4 …
 export ASR_STACK_ENV="$ENV_FILE" MORAG_REPO="$ROOT/morag" ASR_STACK_HOME="$STACK" MORAG_SITE="$SITE"
+export SSL_CERT_FILE="$CA" REQUESTS_CA_BUNDLE="$CA"
 export PATH="$ROOT/bin:\$PATH"
 exec "$VIDEO/bin/python" "$ROOT/web/tools/ingest.py" "\$@"
 EOF

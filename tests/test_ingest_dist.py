@@ -117,7 +117,8 @@ def test_page_gets_the_line_and_the_sizes(live):
     c, _ = live
     body = c.get("/api/ingest/dist").json()
     assert body["bytes"] == 150 and body["days"] == 7
-    assert body["install"].startswith("curl -fsSL http://testserver/api/ingest/get/")
+    assert body["install"].startswith("/usr/bin/curl -fsSL http://testserver/api/ingest/get/"), (
+        "системный curl: он верит связке ключей машины, а curl из conda/brew — только публичным корням")
     assert body["install"].endswith("/install | sh")
     assert [f["title"] for f in body["files"]] == ["питон", "инструменты"]
     assert all("sha256" not in f for f in body["files"]), "контрольные суммы странице не нужны"
@@ -129,7 +130,7 @@ def test_the_line_says_https_when_the_proxy_says_so(live):
     c, app = live
     app.state.cfg.server.trusted_proxy_hops = 1
     body = c.get("/api/ingest/dist", headers={"X-Forwarded-Proto": "https", "Host": "site.example.org"}).json()
-    assert body["install"].startswith("curl -fsSL https://site.example.org/api/ingest/")
+    assert body["install"].startswith("/usr/bin/curl -fsSL https://site.example.org/api/ingest/")
 
 
 def test_installer_comes_out_substituted(live):

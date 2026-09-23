@@ -33,7 +33,11 @@ GB = 1024 ** 3
 # Установщик лежит в инструментах рядом с сайтом (тот же репозиторий): сервер лишь подставляет в
 # него свой адрес и пропуск. Имя внутри zip видит человек в Загрузках — поэтому по-русски.
 INSTALLER = APP_DIR.parent / "tools" / "install-mac.sh"
-APP_COMMAND = "Установить «Загрузить запись».command"
+# ⚠️ Имя несёт инструкцию не от хорошей жизни: двойным щелчком macOS этот файл не откроет
+# («Apple не удалось подтвердить, что файл не содержит вредоносного ПО» — замерено 23.09 на
+# macOS 26; кнопки «открыть всё равно» в диалоге нет, только Корзина и «Готово»). Из Терминала
+# тот же файл запускается без единого вопроса — проверено с настоящей меткой карантина.
+APP_COMMAND = "Установить — перетащите в Терминал.command"
 
 
 def _staging(request: Request) -> core.Staging:
@@ -204,7 +208,7 @@ async def mirror(request: Request) -> dict:
     data = dist.catalog(root)
     return {"files": [{k: v for k, v in f.items() if k != "sha256"} for f in data.get("files") or []],
             "bytes": data.get("bytes", 0), "built": data.get("built", ""),
-            "install": f"curl -fsSL {site}/api/ingest/get/{token}/install | sh",
+            "install": f"/usr/bin/curl -fsSL {site}/api/ingest/get/{token}/install | sh",
             "app": "/api/ingest/app.zip", "days": dist.TTL // 86400}
 
 
@@ -224,7 +228,7 @@ async def app_zip(request: Request):
                "clear\n"
                f'echo "Ставлю «Загрузить запись» с {site}"\n'
                "echo\n"
-               f'curl -fsSL "{site}/api/ingest/get/{token}/install" | sh\n'
+               f'/usr/bin/curl -fsSL "{site}/api/ingest/get/{token}/install" | sh\n'
                'echo\n'
                'echo "Окно можно закрыть."\n')
     buf = io.BytesIO()
