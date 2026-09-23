@@ -96,6 +96,9 @@
       "status": "edited",
       "sha256": "392c1a2cd3c3ecbe096b962d1ee8be6d02beb61899fc6f81ee1fd844fd13ea1b"
     },
+    "app/content/dist.py": {
+      "status": "ours"
+    },
     "app/content/edits.py": {
       "status": "ours"
     },
@@ -286,6 +289,9 @@
     "tests/test_auth.py": {
       "status": "ours"
     },
+    "tests/test_auto_meta.py": {
+      "status": "ours"
+    },
     "tests/test_brand.py": {
       "status": "edited",
       "sha256": "689ff4323c777f31c2144f28f84e73dc3a9e9138f397e3e36cc5494fc0662202"
@@ -323,6 +329,12 @@
       "status": "ours"
     },
     "tests/test_ingest_client.py": {
+      "status": "ours"
+    },
+    "tests/test_ingest_dist.py": {
+      "status": "ours"
+    },
+    "tests/test_ingest_ui.py": {
       "status": "ours"
     },
     "tests/test_intro_frame.py": {
@@ -391,6 +403,9 @@
       "status": "ours"
     },
     "tools/make_cover.py": {
+      "status": "ours"
+    },
+    "tools/requirements-app.txt": {
       "status": "ours"
     },
     "tools/video_batch.py": {
@@ -484,6 +499,9 @@
       "sha256": "f7b90a5ee152eb0aa35a856036fb7c56bcc4be83b398cececa906f6704eb32b2"
     },
     "web/js/hub.js": {
+      "status": "ours"
+    },
+    "web/js/ingest.js": {
       "status": "ours"
     },
     "web/js/main.js": {

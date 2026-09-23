@@ -38,12 +38,19 @@ export function mountUserMenu(me) {
       location.assign(loginPath(homePath()));
     }
   });
+  // Своя запись — только тем, кому можно грузить: у остальных пункт был бы дорогой в никуда
+  // (страница спросила бы у сервера зеркало и получила 403). `data-go` ведёт роутером, без
+  // перезагрузки, как кнопка календаря.
+  const upload = me.can?.ingest
+    ? el("button", { class: "d-item", type: "button", text: "Загрузить свою запись", "data-go": "ingest" })
+    : null;
   // ⚠️ Нативный replaceChildren null не пропускает — рисует текст «null».
   menu.replaceChildren(
     ...[
       el("div", { class: "u-name", text: me.name || me.login }),
       sub ? el("div", { class: "u-sub", text: sub }) : null,
       el("div", { class: "u-role", text: `${me.login} · ${roleName(me.role)}` }),
+      upload,
       out,
     ].filter(Boolean)
   );
@@ -52,6 +59,9 @@ export function mountUserMenu(me) {
     menu.hidden = !on;
     btn.setAttribute("aria-expanded", String(on));
   };
+  // Клик внутри обёртки меню не закрывает (сторож снаружи), а уехав на другой экран с открытым
+  // меню, человек возвращается к висящему попапу — закрываем сами.
+  upload?.addEventListener("click", () => show(false));
   btn.addEventListener("click", () => show(menu.hidden));
   document.addEventListener("click", (event) => {
     if (!menu.hidden && !event.target.closest("#user-wrap")) show(false);

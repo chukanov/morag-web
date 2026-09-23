@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
+import secrets
 import time
 from dataclasses import dataclass
 from datetime import date
@@ -31,8 +34,13 @@ SIGNIN = "/signin"
 # `leak_check --web`); `/api/health` — liveness для доставки и мониторинга (одни счётчики);
 # `/sw.js` — service worker: скрипт, пришедший редиректом, браузер отвергает.
 PUBLIC_EXACT = frozenset({SIGNIN, "/api/auth/state", "/api/auth/login", "/api/health", "/favicon.svg", "/sw.js"})
-PUBLIC_PREFIX = ("/js/", "/css/", "/assets/")
+# ⚠️ `/api/ingest/get/` открыт НАМЕРЕННО: там раздача установщика и зеркала, а забирает их
+# `curl` из терминала, у которого cookie сайта нет и быть не должно. Рубежом служит
+# подписанный пропуск в самом адресе — его проверяет ручка (`app/content/dist.py`).
+PUBLIC_PREFIX = ("/js/", "/css/", "/assets/", "/api/ingest/get/")
 NO_STORE = {"Cache-Control": "no-store"}
+# Корень подписи на время процесса — когда вход выключен и постоянного ключа нет вовсе.
+_EPHEMERAL = secrets.token_bytes(32)
 
 
 class Throttled(Exception):
@@ -89,6 +97,16 @@ class AuthService:
         self._secret = (cfg.secret.encode("utf-8") if cfg.secret
                         else session.load_or_create_secret(Path(data_dir) / "secret") if self.enabled
                         else b"")
+
+    def derived_secret(self, purpose: str) -> bytes:
+        """Ключ для ДРУГОЙ подписи того же сайта (пропуск на зеркало установщика).
+
+        Корень один, но ключи разные: подписью одного назначения нельзя подделать другое, и сам
+        корень наружу не отдаётся. Вход выключен (публичная платформа, разработка) — корнем
+        служит случайный ключ процесса: пропуска переживают запросы, но не рестарт, а рубежом
+        там и так остаётся петлевой адрес.
+        """
+        return hmac.new(self._secret or _EPHEMERAL, purpose.encode("utf-8"), hashlib.sha256).digest()
 
     # --- вход ---------------------------------------------------------------
 

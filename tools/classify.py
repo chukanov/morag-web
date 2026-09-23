@@ -35,10 +35,14 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
+import httpx
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# Выключатели thinking — общие с инструментами экрана: три ключа сразу, каждый провайдер
+# читает свой (описание — в describe_slides). Дублировать их значило бы однажды разойтись.
+from describe_slides import NO_THINK  # noqa: E402
 import spaces  # noqa: E402
 
 TAXONOMY = spaces.family_dir() / "taxonomy.yml"
@@ -62,6 +66,9 @@ SYSTEM = """Ты размечаешь записи внутренних встр
   Не выдумывай: только то, что явно есть в сводке или терминах.
 - kind — формат записи из списка форматов, ТОЛЬКО если в записи он пуст; иначе null.
 - confidence — 0..1, насколько уверен в category.
+- title — заголовок записи 3–8 слов, БЕЗ кавычек и без слов «доклад», «запись», «выступление»:
+  о чём она по существу. Заполняй, только если в записи заголовка нет или он служебный (имя
+  файла, «видео», дата); иначе null.
 - why — одна фраза, почему такая категория.
 """
 
@@ -74,9 +81,10 @@ SCHEMA = {
         "topics": {"type": "array", "items": {"type": "string"}},
         "new_topics": {"type": "array", "items": {"type": "string"}},
         "kind": {"type": ["string", "null"]},
+        "title": {"type": ["string", "null"]},
         "why": {"type": "string"},
     },
-    "required": ["category", "category_alt", "confidence", "topics", "new_topics", "kind", "why"],
+    "required": ["category", "category_alt", "confidence", "topics", "new_topics", "kind", "title", "why"],
     "additionalProperties": False,
 }
 
@@ -285,24 +293,43 @@ def load_env() -> dict:
             "repo": os.environ.get("MORAG_REPO") or values.get("MORAG_REPO") or ""}
 
 
-def build_llm(env: dict):
-    # Чекаут движка: `MORAG_REPO`, иначе сосед `../morag` (как у стека транскрибации).
-    repo = env["repo"] or str(Path(__file__).resolve().parents[2] / "morag")
-    sys.path.insert(0, str(Path(repo).expanduser() / "src"))
-    try:
-        from morag.llm.client import LLMClient
-    except ImportError as e:
-        sys.exit(f"нет LLM-клиента морага ({e}) — запускайте $MORAG_REPO/.venv/bin/python")
-    return LLMClient(base_url=env["base_url"], model=env["model"], api_key=env["api_key"],
-                     enable_thinking=False, timeout=180, max_retries=3, max_concurrent=CONCURRENCY)
+async def complete_json(client: httpx.AsyncClient, env: dict, messages: list[dict],
+                        schema: dict, name: str, max_tokens: int = 800) -> dict:
+    """Один JSON-ответ по схеме — прямым HTTP, без клиента движка и без пакета `openai`.
+
+    ⚠️ Почему не через `morag.llm.client`, как было до 23.09: тот тянет `openai`, а сайт запускает
+    классификатор на СЕРВЕРЕ (шаг `after` после загрузки записи), где venv собран из
+    `app/requirements.txt` и пакета движка нет вовсе — вызов молча падал. Тело запроса собрано
+    байт в байт тем же (`response_format: json_schema`, `temperature 0`, `seed 42`, `NO_THINK`),
+    чтобы разметка не поехала: она сравнивается по отпечатку промпта и модели.
+    """
+    body = {"model": env["model"], "temperature": 0.0, "top_p": 1.0, "seed": 42,
+            "max_tokens": max_tokens, "messages": messages, **NO_THINK,
+            "response_format": {"type": "json_schema",
+                                "json_schema": {"name": name, "schema": schema, "strict": True}}}
+    err = ""
+    for attempt in range(3):
+        try:
+            r = await client.post(env["base_url"] + "/chat/completions", json=body,
+                                  headers={"Authorization": f"Bearer {env['api_key']}"})
+            r.raise_for_status()
+            j = r.json()
+            if not isinstance(j, dict):
+                raise ValueError(f"пустой ответ шлюза: {r.text[:80]!r}")  # 200 с телом null под нагрузкой
+            content = ((j.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+            return json.loads(content)
+        except (httpx.TransportError, httpx.HTTPStatusError, ValueError, OSError, json.JSONDecodeError) as e:
+            err = f"{type(e).__name__}: {str(e)[:160]}"
+            await asyncio.sleep(2 * (attempt + 1))
+    raise RuntimeError(err)
 
 
-async def classify_one(llm, inp: dict, tax: dict, index: dict, categories: list[str]) -> dict:
+async def classify_one(client, inp: dict, tax: dict, index: dict, categories: list[str], env: dict) -> dict:
     user = prompt_for(inp, tax, index)
     try:
-        res = await llm.complete_json(
-            [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}],
-            schema=SCHEMA, schema_name="classify", max_tokens=800)
+        res = await complete_json(client, env, [{"role": "system", "content": SYSTEM},
+                                                {"role": "user", "content": user}],
+                                  SCHEMA, "classify")
     except Exception as e:  # noqa: BLE001 — один сорванный вызов не роняет прогон
         return {"id": inp["id"], "error": f"{type(e).__name__}: {str(e)[:120]}"}
     res = res or {}
@@ -318,6 +345,9 @@ async def classify_one(llm, inp: dict, tax: dict, index: dict, categories: list[
         "topics": topics, "new_topics": [str(x) for x in (res.get("new_topics") or [])] + unknown,
         "kind": kind if (kind in (tax.get("kinds") or []) and not inp["kind"]) else None,
         "had_kind": bool(inp["kind"]),
+        # Заголовок — только для записей, у которых его нет (загрузка с чужой машины): ставит его
+        # `auto_meta.py`, здесь он просто едет в мету и виден в предложении владельцу.
+        "title_auto": (str(res.get("title")).strip() or None) if res.get("title") else None,
         "why": str(res.get("why") or ""),
     }
     return out
@@ -325,22 +355,25 @@ async def classify_one(llm, inp: dict, tax: dict, index: dict, categories: list[
 
 async def classify_many(inputs: list[dict], tax: dict) -> list[dict]:
     env = load_env()
-    llm = build_llm(env)
     index = canon_index(tax)
     categories = category_names(tax)
     sem = asyncio.Semaphore(CONCURRENCY)
     done = 0
+    client = httpx.AsyncClient(timeout=180, trust_env=False)
 
     async def one(inp):
         nonlocal done
         async with sem:
-            res = await classify_one(llm, inp, tax, index, categories)
+            res = await classify_one(client, inp, tax, index, categories, env)
         done += 1
         mark = "⚠️" if res.get("error") or not res.get("category") else " "
         print(f"{mark} {done:3d}/{len(inputs)} {inp['id'][:52]:52} → {res.get('category') or res.get('error', '?')}")
         return res
 
-    results = await asyncio.gather(*(one(i) for i in inputs))
+    try:
+        results = await asyncio.gather(*(one(i) for i in inputs))
+    finally:
+        await client.aclose()
     return results
 
 
@@ -440,6 +473,9 @@ def write_meta(path: Path, result: dict, stamp: dict, dry: bool) -> bool:
         "confidence": round(float(result.get("confidence") or 0), 2),
         "why": result.get("why") or "",
         "new_topics": result.get("new_topics") or [],
+        # Предложенный заголовок — для записей без своего (загрузка через сайт): его ставит
+        # `auto_meta.py` флагом сборщика, сам `make_record` из меты заголовок не берёт.
+        "title_auto": result.get("title_auto"),
         "from": "llm", **stamp,
     }
     if meta.get("classification") == block:

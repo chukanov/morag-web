@@ -39,6 +39,7 @@ import argparse
 import dataclasses
 import json
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -114,7 +115,17 @@ def as_source(video: "Path | str | Source") -> Source:
 
 
 def probe(video: "Path | Source") -> dict:
+    """Что за видео: кодек, размер кадра, частота, длительность.
+
+    ⚠️ Без `ffprobe` тоже обязано работать. На маках коллег стоит установка с зеркала сайта, а
+    там лежит СТАТИЧЕСКИЙ `ffmpeg` из колеса `imageio-ffmpeg` — в нём `ffprobe` не идёт вовсе
+    (готовых статических сборок `ffprobe` под arm64 в PyPI нет ни одной). Запасной ход — `av`:
+    то же ffmpeg, но библиотекой, и колесо под arm64 есть. Порядок именно такой: где `ffprobe`
+    стоит (ноутбук, сервер), поведение байт в байт прежнее.
+    """
     src = as_source(video)
+    if not src.remote and not shutil.which("ffprobe"):
+        return _probe_av(Path(src.path))
     out = subprocess.run(
         src.cmd("ffprobe", ["-v", "error", "-select_streams", "v:0",
                             "-show_entries", "stream=codec_name,width,height,r_frame_rate",
@@ -124,6 +135,21 @@ def probe(video: "Path | Source") -> dict:
     st = (j.get("streams") or [{}])[0]
     return {"codec": st.get("codec_name"), "width": st.get("width"), "height": st.get("height"),
             "rate": st.get("r_frame_rate"), "duration": float(j.get("format", {}).get("duration") or 0)}
+
+
+def _probe_av(path: Path) -> dict:
+    """То же самое библиотекой `av` (PyAV) — когда `ffprobe` на машине нет."""
+    try:
+        import av  # noqa: PLC0415 — только для этого случая, в общий импорт не тянем
+    except ImportError:
+        raise SystemExit("нет ни ffprobe, ни пакета av — поставьте av (tools/requirements-video.txt)")
+    with av.open(str(path)) as container:
+        stream = container.streams.video[0]
+        rate = stream.average_rate or stream.base_rate
+        return {"codec": stream.codec_context.name, "width": stream.codec_context.width,
+                "height": stream.codec_context.height,
+                "rate": f"{rate.numerator}/{rate.denominator}" if rate else "",
+                "duration": float(container.duration / av.time_base) if container.duration else 0.0}
 
 
 def extract_frames(video: "Path | Source", p: Params) -> np.ndarray:

@@ -67,17 +67,37 @@ class Step(Exception):
     """Шаг не прошёл: причина для человека, без трейсбека."""
 
 
+# Хвост сообщений — для страницы (`ingest_ui.py`): те же строки, что в терминале. Кольцо, а не
+# файл: страница показывает ход работы, а разбор потом — в терминале.
+LOG: list[str] = []
+
+
+def size_of(n: int) -> str:
+    """Человеческий размер: файл на 900 КБ не должен печататься как «0 МБ»."""
+    return f"{n / 1e9:.1f} ГБ" if n >= 1e9 else (f"{round(n / 1e6)} МБ" if n >= 1e6 else f"{max(1, round(n / 1e3))} КБ")
+
+
 def say(msg: str) -> None:
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    line = f"[{time.strftime('%H:%M:%S')}] {msg}"
+    print(line, flush=True)
+    LOG.append(line)
+    del LOG[:-400]
 
 
 # --- сессия сайта --------------------------------------------------------------------------
 
 def load_session(site: str | None) -> tuple[str, dict[str, str]]:
+    """Адрес сайта и cookie. Порядок: сохранённая сессия → аргумент → `MORAG_SITE` из окружения.
+
+    ⚠️ Последнее — не мелочь. Установка с сайта (`install-mac.sh`) знает его адрес и кладёт в
+    окружение; без этого шага человек, поставивший приложение по ссылке с сайта, должен был бы
+    ВПИСАТЬ адрес этого же сайта руками. Ловилось на чистой установке.
+    """
     if SESSION.is_file():
         data = json.loads(SESSION.read_text(encoding="utf-8"))
         if not site or site == data.get("site"):
             return data["site"], data.get("cookies") or {}
+    site = site or os.environ.get("MORAG_SITE") or ""
     if not site:
         raise Step("не знаю адрес сайта: сначала `ingest.py login --site …`")
     return site.rstrip("/"), {}
@@ -156,7 +176,7 @@ def transcribe(work: Path, video: Path, rid: str, title: str, speakers: list[str
     audio = work / "audio.mp3"
     ffmpeg_audio(video, audio)
     hints = json.dumps({"about": title, "names": speakers, "terms": []}, ensure_ascii=False)
-    say(f"отправляю звук в адаптер ({audio.stat().st_size // 1_000_000} МБ)…")
+    say(f"отправляю звук в адаптер ({size_of(audio.stat().st_size)})…")
     with client(ASR_BASE, {}, timeout=900) as c:
         with audio.open("rb") as fh:
             r = c.post("/v1/audio/transcriptions",
@@ -272,7 +292,7 @@ class Progress:
         self.sent += len(chunk)
         if self.total > 50_000_000 and time.monotonic() - self.last > 5:
             self.last = time.monotonic()
-            say(f"  {self.label}: {self.sent * 100 // max(1, self.total)} % ({self.sent >> 20} МБ из {self.total >> 20})")
+            say(f"  {self.label}: {self.sent * 100 // max(1, self.total)} % ({size_of(self.sent)} из {size_of(self.total)})")
         return chunk
 
     def __iter__(self):
@@ -303,7 +323,7 @@ def upload(work: Path, site: str, cookies: dict[str, str], manifest: dict, files
         for name, path in files + [(manifest["video"], video)]:
             if name in sent or not path.is_file():
                 continue
-            say(f"загружаю {name} ({path.stat().st_size >> 20} МБ)")
+            say(f"загружаю {name} ({size_of(path.stat().st_size)})")
             body = Progress(path, name)
             r = c.put(f"/api/ingest/{rid}/files/{name}", content=body,
                       headers={"Content-Length": str(body.total), "Content-Type": "application/octet-stream"})
@@ -334,49 +354,93 @@ def upload(work: Path, site: str, cookies: dict[str, str], manifest: dict, files
 
 # --- run ---------------------------------------------------------------------------------------
 
-def cmd_run(args: argparse.Namespace) -> int:
-    video = Path(args.video).expanduser().resolve()
+def check_fields(video: Path, title: str, date: str, slides: str | None) -> dict:
+    """Проверить то, что ввёл человек, ДО долгой работы: час расшифровки и отказ на загрузке
+    из-за кривой даты — худшее, что можно сделать с его временем. Возвращает разобранные поля."""
     if not video.is_file():
         raise Step(f"нет файла {video}")
     ext = video.suffix.lower().lstrip(".")
     if ext not in VIDEO_EXT:
         raise Step(f"видео — {', '.join(VIDEO_EXT)}; у вас .{ext}")
-    if len(args.date) != 10 or args.date[4] != "-" or args.date[7] != "-":
-        raise Step("--date в виде YYYY-MM-DD")
-    rid = f"{args.date}-{slugify(args.title)}"
-    speakers = [s.strip() for s in (args.speakers or "").split(",") if s.strip()]
-    tags = [t.strip() for t in (args.tags or "").split(",") if t.strip()]
-    site, cookies = load_session(args.site)
+    if len(date) != 10 or date[4] != "-" or date[7] != "-" or not date.replace("-", "").isdigit():
+        raise Step("дата — в виде ГГГГ-ММ-ДД")
+    if len(title.strip()) < 3:
+        raise Step("название — от трёх знаков")
+    rid = f"{date}-{slugify(title)}"
+    if not rid.rsplit("-", 1)[-1]:
+        raise Step("из названия не вышло адреса записи — напишите его словами")
+    slides_pdf = Path(slides).expanduser().resolve() if slides else None
+    if slides_pdf and not slides_pdf.is_file():
+        raise Step(f"нет слайдов {slides_pdf}")
+    return {"id": rid, "ext": ext, "slides": slides_pdf}
+
+
+def pipeline(video: Path, *, title: str, date: str, event: str = "", speakers: list[str] | None = None,
+             tags: list[str] | None = None, summary: str = "", slides: str | None = None,
+             site: str | None = None, with_stack: bool = False, with_screen: bool = True,
+             wait: bool = True, title_auto: bool = False) -> str:
+    """Весь путь записи: расшифровка → экран → пакет на сайт. Общий для командной строки и для
+    страницы (`ingest_ui.py`) — шаги, возобновление и сообщения обязаны быть одни и те же."""
+    video = Path(video).expanduser().resolve()
+    fields = check_fields(video, title, date, slides)
+    rid, ext, slides_pdf = fields["id"], fields["ext"], fields["slides"]
+    speakers = [s for s in (speakers or []) if s]
+    tags = [t for t in (tags or []) if t]
+    site_url, cookies = load_session(site)
     work = HOME / rid
     work.mkdir(parents=True, exist_ok=True)
     say(f"запись {rid} — рабочий каталог {work}")
 
     stack_started = False
     try:
-        if args.stack and not (work / "artifact.json").is_file() and not stack_health():
+        if with_stack and not (work / "artifact.json").is_file() and not stack_health():
             stack("up")
             stack_started = True
-        artifact = transcribe(work, video, rid, args.title, speakers)
-        if not args.no_screen:
-            record = local_record(work, artifact, rid, args.title, args.date)
+        artifact = transcribe(work, video, rid, title, speakers)
+        if with_screen:
+            record = local_record(work, artifact, rid, title, date)
             screen(work, video, record)
     finally:
         if stack_started:
             stack("down")
 
-    slides_pdf = Path(args.slides).expanduser().resolve() if args.slides else None
-    if slides_pdf and not slides_pdf.is_file():
-        raise Step(f"нет слайдов {slides_pdf}")
-    manifest = {"title": args.title, "date": args.date, "event": args.event or "", "tags": tags,
-                "summary": args.summary or "", "speakers": speakers, "video": f"video.{ext}"}
+    manifest = {"title": title, "date": date, "event": event or "", "tags": tags,
+                "summary": summary or "", "speakers": speakers, "video": f"video.{ext}",
+                # «название подставилось само» — чтобы сервер знал, можно ли его переписать
+                "title_auto": bool(title_auto)}
     files: list[tuple[str, Path]] = [("artifact.json", artifact)]
     files += [(name, work / name) for name in SIDECARS if (work / name).is_file()]
     if (work / "slides.zip").is_file():
         files.append(("slides.zip", work / "slides.zip"))
     if slides_pdf:
         files.append(("slides.pdf", slides_pdf))
-    upload(work, site, cookies, manifest, files, video, wait=not args.no_wait)
+    return upload(work, site_url, cookies, manifest, files, video, wait=wait)
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    pipeline(Path(args.video),
+             title=args.title, date=args.date, event=args.event,
+             speakers=[s.strip() for s in (args.speakers or "").split(",") if s.strip()],
+             tags=[t.strip() for t in (args.tags or "").split(",") if t.strip()],
+             summary=args.summary or "", slides=args.slides, site=args.site,
+             with_stack=args.stack, with_screen=not args.no_screen, wait=not args.no_wait)
     return 0
+
+
+def cmd_ui(args: argparse.Namespace) -> int:
+    """Страница вместо командной строки: поднять локальный сервер и открыть браузер."""
+    import ingest_ui
+    return ingest_ui.serve(port=args.port, open_browser=not args.no_open)
+
+
+def cmd_app(args: argparse.Namespace) -> int:
+    """Окно приложения. Нет PyObjC (не мак, урезанный питон) — та же страница в браузере."""
+    import ingest_app
+    if not args.browser and ingest_app.available():
+        return ingest_app.run(port=args.port)
+    import ingest_ui
+    say("окна нет (нужен PyObjC) — открываю страницу в браузере")
+    return ingest_ui.serve(port=args.port, open_browser=True)
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -412,6 +476,14 @@ def main() -> int:
     p.add_argument("id")
     p.add_argument("--site")
     p.set_defaults(fn=cmd_status)
+    p = sub.add_parser("app", help="окно приложения: перетащить видео и заполнить поля")
+    p.add_argument("--port", type=int, default=8099)
+    p.add_argument("--browser", action="store_true", help="не окно, а страница в браузере")
+    p.set_defaults(fn=cmd_app)
+    p = sub.add_parser("ui", help="страница в браузере вместо командной строки")
+    p.add_argument("--port", type=int, default=8099)
+    p.add_argument("--no-open", action="store_true", help="не открывать браузер самому")
+    p.set_defaults(fn=cmd_ui)
     p = sub.add_parser("options", help="допустимые рубрики и потолки сайта")
     p.add_argument("--site")
     p.set_defaults(fn=cmd_options)

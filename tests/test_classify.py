@@ -55,23 +55,33 @@ def test_prompt_lists_taxonomy_and_record_facts():
     assert terms_line.index("Postgres") < terms_line.index("zookeeper")
 
 
-class FakeLLM:
-    def __init__(self, answer):
-        self.answer = answer
-        self.calls = 0
+ENV = {"base_url": "https://llm.example.org/api", "model": "Instruct", "api_key": "k"}
 
-    async def complete_json(self, messages, schema, schema_name, max_tokens):
-        self.calls += 1
-        assert schema["required"] and schema_name == "classify"
-        return self.answer
+
+def fake_gateway(answer):
+    """Шлюз, отвечающий готовым JSON. С 23.09 классификатор ходит прямым HTTP (на сервере нет
+    пакета движка), поэтому подменяем транспорт, а не клиент."""
+    import json as _json
+
+    import httpx
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = _json.loads(request.read())
+        assert body["response_format"]["json_schema"]["name"] == "classify"
+        assert body["temperature"] == 0.0 and body["seed"] == 42, "детерминизм разметки"
+        if isinstance(answer, Exception):
+            raise answer
+        return httpx.Response(200, json={"choices": [{"message": {"content": _json.dumps(answer, ensure_ascii=False)}}]})
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(handle))
 
 
 def _run(answer, inp_kind=None):
     inp = {"id": "r1", "title": "t", "date": "2026-01-01", "branch": "Летучка", "sub": "2026", "event": "",
            "kind": inp_kind or [], "tags": [], "summary": "", "calendar_topic": "", "speakers": [],
            "doc_summary": "s", "terms": []}
-    return asyncio.run(classify.classify_one(FakeLLM(answer), inp, TAX, classify.canon_index(TAX),
-                                             classify.category_names(TAX)))
+    return asyncio.run(classify.classify_one(fake_gateway(answer), inp, TAX, classify.canon_index(TAX),
+                                             classify.category_names(TAX), ENV))
 
 
 def test_answer_is_validated_against_taxonomy():
@@ -96,13 +106,13 @@ def test_category_outside_list_is_empty_and_kind_not_overwritten():
     assert res["kind"] is None and res["had_kind"] is True
 
 
-def test_llm_failure_is_reported_not_raised():
-    class Boom:
-        async def complete_json(self, *a, **k):
-            raise RuntimeError("timeout")
+def test_llm_failure_is_reported_not_raised(monkeypatch):
+    """Сорванный вызов — строка с причиной в результате, а не исключение: один промах не должен
+    ронять прогон по корпусу (и приём записи на сервере)."""
+    monkeypatch.setattr(classify.asyncio, "sleep", lambda *_: asyncio.sleep(0))
     inp = {"id": "r1", "title": "t", "date": "", "branch": "", "sub": "", "event": "", "kind": [], "tags": [],
            "summary": "", "calendar_topic": "", "speakers": [], "doc_summary": "", "terms": []}
-    res = asyncio.run(classify.classify_one(Boom(), inp, TAX, {}, []))
+    res = asyncio.run(classify.classify_one(fake_gateway(RuntimeError("timeout")), inp, TAX, {}, [], ENV))
     assert res["error"].startswith("RuntimeError")
 
 

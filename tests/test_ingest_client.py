@@ -131,7 +131,7 @@ def test_refusals_are_messages_not_tracebacks(env, capsys):
     sys.argv = ["ingest.py", "run", str(tmp / "нет.mp4"), "--title", "x", "--date", "2026-03-12"]
     assert ingest.main() == 1 and "нет файла" in capsys.readouterr().out
     sys.argv = ["ingest.py", "run", str(video), "--title", "Норм", "--date", "12.03.2026"]
-    assert ingest.main() == 1 and "YYYY-MM-DD" in capsys.readouterr().out
+    assert ingest.main() == 1 and "ГГГГ-ММ-ДД" in capsys.readouterr().out
     ingest.SESSION.unlink()
     sys.argv = ["ingest.py", "run", str(video), "--title", "Норм", "--date", "2026-03-12", "--no-screen"]
     assert ingest.main() == 1 and "login" in capsys.readouterr().out

@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import re
 import shutil
 import sys
@@ -70,6 +71,10 @@ class Manifest:
     video: str = ""            # имя файла видео в стейджинге (`video.mp4`)
     uploader: str = ""         # логин/имя из сессии
     record_id: str = ""
+    # Название подставлено из имени файла, а не написано человеком. ⚠️ Сервер сам этого не
+    # различает (имя файла бывает осмысленным), а доразметка (`tools/auto_meta.py`) заменяет
+    # только служебные заголовки — поэтому про источник говорит тот, кто загружает.
+    title_auto: bool = False
 
     def to_json(self) -> dict:
         return {k: v for k, v in self.__dict__.items()}
@@ -115,7 +120,8 @@ def validate(raw: dict, family: Path) -> Manifest:
     if not ID_RE.match(rid):
         raise Refused("из названия не вышло адреса записи — напишите его латиницей или кириллицей")
     return Manifest(title=title, date=date, event=event, tags=tags, summary=summary,
-                    speakers=speakers, video=f"video.{ext}", record_id=rid)
+                    speakers=speakers, video=f"video.{ext}", record_id=rid,
+                    title_auto=bool(raw.get("title_auto")))
 
 
 def accept_name(name: str) -> bool:
@@ -215,9 +221,9 @@ class Staging:
         return current
 
 
-async def _run(argv: list[str], cwd: Path, subst: dict[str, str]) -> str:
+async def _run(argv: list[str], cwd: Path, subst: dict[str, str], env: dict[str, str] | None = None) -> str:
     cmd = [a.format(**subst) for a in argv]
-    proc = await asyncio.create_subprocess_exec(*cmd, cwd=str(cwd),
+    proc = await asyncio.create_subprocess_exec(*cmd, cwd=str(cwd), env={**os.environ, **(env or {})},
                                                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
     out, _ = await proc.communicate()
     text = out.decode("utf-8", "replace")
@@ -226,7 +232,26 @@ async def _run(argv: list[str], cwd: Path, subst: dict[str, str]) -> str:
     return text
 
 
-async def accept(staging: Staging, rid: str, *, family: Path, cfg, root: Path) -> Path:
+def llm_env_of(state) -> dict[str, str]:
+    """Адрес, модель и ключ шлюза для шагов после сборки — ИЗ КОНФИГА САЙТА, а не из файла стека.
+
+    ⚠️ Инструменты (`classify`, `make_blurb`, `make_cover`) читают `ASR_LLM_BASE_URL`/`OR_KEY` из
+    окружения, иначе из `~/.asr-stack.env`. На сервере этого файла нет и не будет — до 23.09 из-за
+    этого шаг `after` с обложкой падал МОЛЧА (ошибки шагов проглатываются). Сайт и так говорит с
+    тем же шлюзом (`topic`), а ключ одалживает у конфига движка, — отдаём их шагу, и второй копии
+    секрета на диске не появляется.
+    """
+    cfg = state.cfg
+    key = cfg.topic.api_key or ""
+    if not key and cfg.topic.borrow_key_from_corpus and getattr(state, "default_corpus", None):
+        key = state.default_corpus.engine_llm_key() or ""
+    if not (cfg.topic.base_url and key):
+        return {}
+    return {"ASR_LLM_BASE_URL": cfg.topic.base_url, "ASR_LLM_MODEL": cfg.topic.model, "OR_KEY": key}
+
+
+async def accept(staging: Staging, rid: str, *, family: Path, cfg, root: Path,
+                 llm_env: dict[str, str] | None = None) -> Path:
     """Стейджинг → запись в корпусе. Порядок важен и записан:
 
     1. номера голосов — в свой диапазон (артефакт и `refs`);
@@ -276,7 +301,8 @@ async def accept(staging: Staging, rid: str, *, family: Path, cfg, root: Path) -
             "speakers": [{"name": n, "from": "upload"} for n in m.speakers],
             "summary": m.summary,
             "links": {},
-            "sources": {"upload": {"by": m.uploader, "at": time.strftime("%Y-%m-%dT%H:%M:%S")}},
+            "sources": {"upload": {"by": m.uploader, "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                                   "title_from": "file" if m.title_auto else "author"}},
         }
         (d / f"{rid}.meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -311,9 +337,15 @@ async def accept(staging: Staging, rid: str, *, family: Path, cfg, root: Path) -
             (d / "slides.zip").unlink()
 
         subst["record_dir"] = str(record_dir)
-        for after in cfg.after:
+        # Доразметка первой: остальные шаги (обложка, снимок голосов) читают уже готовую шапку, а
+        # индексация идёт следующей задачей очереди — значит категория, темы и название попадают в
+        # payload чанков с первого прогона, переиндексация не нужна.
+        steps = list(cfg.after)
+        if cfg.enrich:
+            steps.insert(0, [sys.executable, "tools/auto_meta.py", "{record_dir}"])
+        for after in steps:
             try:
-                await _run(after, root, subst)
+                await _run(after, root, subst, env=llm_env)
             except RuntimeError as error:
                 log.warning("приём %s: шаг после сборки не удался: %s", rid, error)
 

@@ -92,7 +92,7 @@ if [[ -x "$VENV/bin/python" ]]; then ok "есть"; elif [[ $CHECK -eq 0 ]]; the
   "$PY" -m venv "$VENV"; "$VENV/bin/pip" install -q -r "$HERE/requirements-video.txt"
 fi
 
-say "команда morag-ingest"
+say "команда morag-ingest и ярлык для Finder"
 if [[ $CHECK -eq 0 ]]; then
   mkdir -p "$STACK_HOME/bin"
   cat > "$STACK_HOME/bin/morag-ingest" <<EOF
@@ -101,8 +101,18 @@ export ASR_STACK_ENV="$ENV_FILE" MORAG_REPO="$MORAG_REPO"
 exec "$VENV/bin/python" "$HERE/ingest.py" "\$@"
 EOF
   chmod +x "$STACK_HOME/bin/morag-ingest"
+  # Ярлык, который открывается двойным щелчком: страница вместо командной строки. `.command` —
+  # родной для macOS способ «файл, запускающий программу»: Finder отдаёт его Терминалу, тот
+  # поднимает локальный сервер и открывает браузер.
+  mkdir -p "$HOME/Applications"
+  cat > "$HOME/Applications/Загрузить запись.command" <<EOF
+#!/bin/sh
+exec "$STACK_HOME/bin/morag-ingest" ui
+EOF
+  chmod +x "$HOME/Applications/Загрузить запись.command"
 fi
-ok "$STACK_HOME/bin/morag-ingest (добавьте $STACK_HOME/bin в PATH)"
+ok "~/Applications/Загрузить запись.command — двойной щелчок открывает страницу"
+ok "$STACK_HOME/bin/morag-ingest — то же из терминала (добавьте $STACK_HOME/bin в PATH)"
 echo
-echo "дальше:  morag-ingest login --site https://…    # один раз"
-echo "         morag-ingest run видео.mp4 --title \"…\" --date YYYY-MM-DD --stack"
+echo "дальше:  двойной щелчок по «Загрузить запись» в ~/Applications — и заполнить форму"
+echo "         (из терминала то же: morag-ingest ui; совсем без страницы — morag-ingest run …)"

@@ -169,6 +169,14 @@ class IngestCfg(BaseModel):
         [sys.executable, "tools/voices.py", "--scan"],
     ])
     index: list[str] = Field(default_factory=list)   # пусто — индексацию не запускать
+    # Зеркало установщика для маков коллег (`app/content/dist.py`): каталог с портативным питоном,
+    # ffmpeg, снимком инструментов и моделями. Пусто — раздачи нет вовсе (404), и это умолчание:
+    # гигабайты рядом с сайтом заводит тот, кто решил раздавать. Путь — от файла конфига.
+    dist_dir: str = ""
+    # Доразметка загруженной записи на сервере (название, категория, темы, аннотация) —
+    # `tools/auto_meta.py` первым шагом `after`, до индексации. Выключено по умолчанию: это
+    # решение корпуса, а не платформы. Адрес и ключ шлюза берутся из `topic` и конфига движка.
+    enrich: bool = False
 
 
 class LdapCfg(BaseModel):
@@ -414,6 +422,7 @@ def _anchor(data: dict, base: Path) -> dict:
     if isinstance(data.get("ingest"), dict):
         fix(data["ingest"], "dir")
         fix(data["ingest"], "archive")
+        fix(data["ingest"], "dist_dir")
     return data
 
 
@@ -771,7 +780,8 @@ def _inside(base: Path, name: str) -> Path | None:
 # Слаги, которые нельзя отдать пространству: их занимает сам роутер. Пространство с таким
 # именем перехватило бы свою же страницу, и выглядело бы это как «раздел иногда не открывается».
 # ⚠️ Тот же список продублирован в web/js/router.js (RESERVED) — менять оба разом.
-RESERVED_SLUGS = {"chat", "records", "rec", "api", "css", "js", "assets", "voices", "calendar", "signin"}
+RESERVED_SLUGS = {"chat", "records", "rec", "api", "css", "js", "assets", "voices", "calendar", "signin",
+                  "ingest"}
 HUB_FILE = "hub.yml"
 
 
