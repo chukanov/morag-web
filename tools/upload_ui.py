@@ -308,7 +308,9 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/api/state":
             running = STATE.get("stage") == "running"
             self._json({"job": dict(STATE), "log": upload.LOG[-200:],
-                        "stack": bool(cached("stack", 5.0, upload.stack_health)),
+                        # ⚠️ Отдаём health ЦЕЛИКОМ, а не «да/нет»: в настройках человек должен видеть,
+                        # КТО именно не отвечает — живьём стек выглядел поднятым, а диаризатор не стартовал.
+                        "stack": cached("stack", 5.0, upload.stack_health) or {},
                         "site": cached("site", 30.0, site_state),
                         "videos": [] if running else cached("videos", 5.0, videos),
                         "llm": cached("llm", 30.0, llm_state),

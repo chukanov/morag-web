@@ -150,3 +150,14 @@ a{color:var(--accent)}
    Загрузок и Рабочего стола — пути брошенного файла браузер не даёт. */
 input.path{max-width:460px;margin:12px auto 0;text-align:center;
            font:12px/1.5 var(--mono);color:var(--ink-dim)}
+
+/* Состояние компонент: кто отвечает, а кто нет. Одного «стек поднят» мало:
+   живьём три службы из четырёх отвечали, а диаризатор не стартовал вовсе. */
+.parts{display:grid;gap:6px;margin:10px 0 14px}
+.part{display:grid;grid-template-columns:10px 132px 1fr;gap:9px;align-items:center;
+      font:12px/1.5 var(--mono);color:var(--ink-dim)}
+.part b{color:var(--ink);font-weight:500}
+.part i{width:8px;height:8px;border-radius:50%;background:var(--ink-faint)}
+.part i.ok{background:var(--good)}
+.part i.bad{background:var(--bad)}
+.part i.off{background:var(--ink-faint);opacity:.5}

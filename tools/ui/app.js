@@ -268,32 +268,45 @@ async function tick() {
     id("open-record").onclick = () => { if (job.url) window.open(job.url, "_blank"); };
   }
 
+  renderParts(s);
   id("env").innerHTML = [
-    site.site ? `сайт ${site.site}${site.who ? ` — ${site.who}` : ""}` : "сайт не выбран",
-    s.stack ? '<span class="ok">стек транскрибации поднят</span>' : "стек погашен — поднимется сам",
-    llmLine(s.llm),
     `рабочая папка ${s.home}`,
-    site.error ? `<span class="bad">сайт не отвечает: ${site.error}</span>` : "",
     site.note ? `<span class="bad">${site.note}</span>` : "",
   ].filter(Boolean).join(" · ");
-  // Настройки сами раскрываются только если ходить в шлюз нечем: это единственное, что человек
-  // обязан сделать руками, — и то лишь когда сайт не умеет ходить за него.
-  if (!id("llm-msg").dataset.touched) {
-    // ⚠️ Дорога ОДНА: стадии с ИИ ходят в шлюз через сайт той же сессией. Свой ключ в окне
-    // больше не спрашиваем — две дороги только путали (владелец, 24.09).
-    id("llm-msg").textContent = s.llm?.via_site
-      ? "Стадии с ИИ идут в шлюз через сайт — ключ не нужен."
-      : "Войдите на сайт: стадии с ИИ идут в шлюз его сессией.";
-  }
 }
 
-/** Чем ходим в шлюз — одной строкой в состоянии. */
-function llmLine(llm) {
-  if (!llm) return "";
-  if (llm.via_site) return "ИИ-стадии через сайт (ключ не нужен)";
-  if (llm.ready) return "ИИ-стадии настроены";
-  return '<span class="bad">ИИ-стадии некуда отправить: войдите на сайт</span>';
+/** Состояние компонент: кто отвечает, а кто нет.
+ *
+ * ⚠️ Одного «стек поднят» мало: живьём стек выглядел поднятым, три службы из четырёх
+ * отвечали, а диаризатор не стартовал вовсе — и расшифровка упала на первой стадии.
+ */
+function renderParts(s) {
+  const stack = s.stack || {};
+  const down = stack.downstream || {};
+  const site = s.site || {};
+  const up = Boolean(stack.status);
+  const row = (name, state, note) => el("div", { class: "part" },
+    el("i", { class: state }), el("b", { text: name }), el("span", { text: note || "" }));
+  const health = (key, name) => {
+    if (!up) return row(name, "off", "стек погашен");
+    const v = down[key];
+    if (v === "ok") return row(name, "ok", "отвечает");
+    return row(name, "bad", String(v || "не отвечает").replace(/^err: /, ""));
+  };
+  id("parts").replaceChildren(
+    health("diarizer", "диаризатор"),
+    health("asr", "whisper"),
+    health("campp", "голоса (CAM++)"),
+    row("адаптер", up ? "ok" : "off", up ? "отвечает" : "не поднят — поднимется сам"),
+    row("LLM-шлюз", s.llm?.via_site ? "ok" : (s.llm?.ready ? "ok" : "bad"),
+        (stack.llm ? `модель ${stack.llm}` : "")
+        + (s.llm?.via_site ? " · через сайт" : s.llm?.ready ? " · напрямую" : "некуда ходить: войдите на сайт")),
+    row("сайт", site.error ? "bad" : (site.logged ? "ok" : "off"),
+        site.error ? site.error
+          : `${site.site || "не выбран"}${site.who ? ` — ${site.who}` : " — не вошли"}`),
+  );
 }
+
 
 id("do-login").onclick = async () => {
   id("login-msg").textContent = "…";

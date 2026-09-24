@@ -374,6 +374,9 @@
     "tests/test_resolve.py": {
       "status": "ours"
     },
+    "tests/test_screen_tools.py": {
+      "status": "ours"
+    },
     "tests/test_turn_edits.py": {
       "status": "ours"
     },
@@ -454,6 +457,9 @@
       "status": "ours"
     },
     "tools/ui/upload.css": {
+      "status": "ours"
+    },
+    "tools/ui/voices.js": {
       "status": "ours"
     },
     "tools/ui/wave.js": {

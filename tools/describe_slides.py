@@ -86,9 +86,22 @@ def stack_env_file() -> Path:
 
 def load_env() -> dict:
     """Адрес и ключ шлюза из файла стека; прокси оболочки снимаем — контуру он не нужен, а
-    питон через него падает на сертификате."""
+    питон через него падает на сертификате.
+
+    ⚠️⚠️ Здесь же включаем доверие СВЯЗКЕ КЛЮЧЕЙ МАШИНЫ (`truststore`). Сайт и шлюз подписаны
+    внутренним центром сертификации, а httpx верит только `certifi` — без этого ВСЕ кадры падают
+    с `CERTIFICATE_VERIFY_FAILED` (ловилось живьём 24.09). В `upload.py` такая же инъекция есть, но она
+    живёт В СВОЁМ ПРОЦЕССЕ и в подпроцессы не наследуется; `SSL_CERT_FILE` тоже не спасает — его
+    экспортирует только враппер установщика, а из чекаута его нет вовсе. `screen_refs.py` берёт
+    эту же функцию — чинится разом.
+    """
     for var in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
         os.environ.pop(var, None)
+    try:
+        import truststore   # noqa: PLC0415 - нужен только здесь и только один раз
+        truststore.inject_into_ssl()
+    except Exception:       # noqa: BLE001 - нет пакета — работаем как раньше, через certifi
+        pass
     env_file = stack_env_file()
     values: dict[str, str] = {}
     if env_file.is_file():

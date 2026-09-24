@@ -99,7 +99,8 @@ def test_state_lists_videos_newest_first_and_skips_others(server):
     names = [v["name"] for v in body["videos"]]
     assert names[0] == "talk.mp4" and "deep.mov" in names, "видео из подпапки тоже видно"
     assert "notes.txt" not in names
-    assert body["stack"] is True and body["site"]["events"] == ["Доклады", "Встречи"]
+    # ⚠️ Состояние стека отдаётся ЦЕЛИКОМ, а не «да/нет»: в настройках видно, кто именно молчит.
+    assert body["stack"].get("status") == "ok" and body["site"]["events"] == ["Доклады", "Встречи"]
     assert body["job"]["stage"] == "idle" and body["home"].endswith("work")
 
 
