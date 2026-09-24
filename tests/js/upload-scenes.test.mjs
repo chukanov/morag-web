@@ -58,12 +58,27 @@ globalThis.document = {
   documentElement: new El("html"),
 };
 globalThis.matchMedia = () => ({ matches: false });
+globalThis.window = globalThis;
 globalThis.getComputedStyle = () => ({ getPropertyValue: () => "#E4A04B" });
-globalThis.requestAnimationFrame = (fn) => { fn(0); return 1; };
+// ⚠️ Кадры — УПРАВЛЯЕМЫЕ, и вызывать колбэк синхронно прямо из `requestAnimationFrame` нельзя:
+// сцена сбрасывает свою защёлку внутри кадра, а синхронный вызов возвращает номер уже ПОСЛЕ
+// сброса — цикл встаёт навсегда, и сцена замирает после первой правки. Ровно на этом и попались.
+let CLOCK = 0;
+const FRAMES = [];
+globalThis.requestAnimationFrame = (fn) => FRAMES.push(fn);
+globalThis.setTimeout = (fn) => { fn(); return 1; };
+/** Прокрутить n кадров, каждый на 500 мс вперёд — быстрее любого темпа сцены. */
+function flush(n = 12) {
+  for (let i = 0; i < n; i++) {
+    const batch = FRAMES.splice(0, FRAMES.length);
+    CLOCK += 500;
+    for (const fn of batch) fn(CLOCK);
+  }
+}
 globalThis.performance = { now: () => 0 };
 
 const { budget, state, MIN_RATE, MAX_RATE } = await import(join(repo, "tools/ui/play.js"));
-const { fixes } = await import(join(repo, "tools/ui/fixes.js"));
+const { textScene } = await import(join(repo, "tools/ui/text.js"));
 
 // --- темп ------------------------------------------------------------------------------------
 
@@ -119,13 +134,23 @@ const { fixes } = await import(join(repo, "tools/ui/fixes.js"));
 
 {
   const root = new El("div");
-  const scene = fixes(root);
+  const scene = textScene(root);
   scene.apply({ t: "stage.start", stage: "final-round" });
 
+  // Реплика, над которой идёт работа, — и правки прямо в ней.
+  scene.apply({ t: "turn.text", turn: 0, start: 61, whole: true,
+                text: "Мы берём эйр флоу и ставим его в H200, а звонил Ковалёв." });
   scene.apply({ t: "turn.fix", turn: 0, start: 61, was: "эйр флоу", now: "Airflow", ok: true, why: "" });
   scene.apply({ t: "turn.fix", turn: 1, start: 150, was: "H200", now: "H100", ok: false, why: "number" });
   scene.apply({ t: "turn.fix", turn: 2, start: 30, was: "Ковалёв", now: "Ковалев", ok: false,
                 why: "breaks_term", term: "Мария Ковалёва" });
+  flush();
+
+  // ⚠️ Принятая замена осталась В ТЕКСТЕ, отвергнутые — нет: старое слово никуда не делось.
+  assert.match(scene.state().text, /Airflow/, "принятое слово заменено прямо в реплике");
+  assert.ok(!/эйр флоу/.test(scene.state().text), "старого слова в тексте больше нет");
+  assert.match(scene.state().text, /H200/, "отвергнутая замена текст не трогает");
+  assert.match(scene.state().text, /Ковалёв/);
 
   const list = root.children.find((k) => k.classList.contains("fx-list"));
   const cards = list.children;
@@ -139,7 +164,10 @@ const { fixes } = await import(join(repo, "tools/ui/fixes.js"));
   assert.equal(cards[2].attrs["data-ok"], "1");
   assert.ok(!/why/.test(cards[2].textContent), "у принятой замены причины нет");
 
-  assert.deepEqual(scene.state(), { applied: 1, dropped: 2, turns: 0, cards: 3 });
+  const st = scene.state();
+  assert.equal(st.applied, 1);
+  assert.equal(st.dropped, 2);
+  assert.equal(st.cards, 3);
 
   // Полоска реплик строится ОДИН раз и дальше только перекрашивается.
   scene.apply({ t: "turn.done", turn: 0, start: 61, n: 5, changed: true });
@@ -153,12 +181,29 @@ const { fixes } = await import(join(repo, "tools/ui/fixes.js"));
 {
   // Список не лог: старое уезжает, иначе за девять минут накопится четыре сотни узлов.
   const root = new El("div");
-  const scene = fixes(root);
+  const scene = textScene(root);
   for (let i = 0; i < 60; i++) {
     scene.apply({ t: "turn.fix", turn: i, start: i, was: "а", now: "б", ok: true, why: "" });
   }
-  assert.ok(scene.state().cards <= 40, `карточек ${scene.state().cards}`);
+  flush(80);
+  assert.ok(scene.state().cards <= 30, `карточек ${scene.state().cards}`);
   assert.equal(scene.state().applied, 60, "счётчик считает ВСЕ, а не видимые");
+}
+
+{
+  // Текст печатается ПО МЕРЕ появления: событие пришло одно, а читается оно кадрами.
+  const root = new El("div");
+  const scene = textScene(root);
+  scene.apply({ t: "stage.start", stage: "pass2" });
+  scene.apply({ t: "chunk.done", i: 1, raw: "Смотрите, здесь у нас обычная очередь." });
+  const first = scene.state().text.length;
+  flush(1);
+  const mid = scene.state().text.length;
+  flush(60);
+  const done = scene.state().text.length;
+  assert.ok(first < mid && mid < done, `печать идёт кадрами: ${first} → ${mid} → ${done}`);
+  assert.match(scene.state().text, /обычная очередь/);
+  assert.equal(scene.state().mode, "writing");
 }
 
 console.log("ok upload-scenes");

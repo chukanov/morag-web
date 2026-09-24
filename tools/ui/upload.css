@@ -73,6 +73,25 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
 .wv-who{display:inline-flex;align-items:center;gap:6px}
 .wv-who i{width:9px;height:9px;border-radius:3px;display:inline-block}
 
+/* текст: сперва печатается, потом правится на месте */
+.tx-head{font:11px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.06em;
+         color:var(--ink-faint);margin:0 0 6px;min-height:1.5em}
+/* Речь — серифом, как в читалке: это текст для чтения, а не служебная строка. */
+.tx-body{font:16px/1.65 var(--serif);color:var(--ink);margin:0 0 14px;min-height:5.2em;
+         max-height:9.2em;overflow:hidden;background:var(--surface-2);border-radius:10px;
+         padding:12px 14px;white-space:pre-wrap}
+/* В режиме печати читается хвост — там, где сейчас идёт работа. */
+.tx-body:not(.fixing){display:flex;flex-direction:column-reverse}
+
+/* Слово под правкой: подсветка — тем же приёмом, что в караоке (переход живёт на входящем
+   состоянии, поэтому появление плавное, а снятие мгновенное). */
+.tx-hit{background:var(--accent-wash);color:var(--ink);border-radius:4px;padding:0 2px;
+        box-shadow:0 0 0 2px var(--accent-wash);transition:background .05s linear}
+.tx-hit.done{background:color-mix(in srgb,var(--good) 22%,transparent);font-weight:700}
+.tx-hit.bad{background:color-mix(in srgb,var(--bad) 18%,transparent)}
+.tx-hit.bad.shown::after{content:" ✗";color:var(--bad);font-size:.8em}
+.tx-hit.bad.gone{background:transparent;box-shadow:none;transition:background .4s,box-shadow .4s}
+
 /* исправления */
 .fx-ticks{display:flex;gap:2px;flex-wrap:wrap;margin:0 0 10px}
 .fx-tick{width:3px;height:9px;border-radius:2px;background:var(--surface-2);display:inline-block;
@@ -81,7 +100,7 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
 .fx-tick.changed{background:var(--good)}
 .fx-tick.failed{background:var(--bad)}
 
-.fx-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:280px;overflow:auto}
+.fx-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:190px;overflow:auto}
 .fx{display:flex;align-items:baseline;gap:8px;padding:5px 9px;border-radius:8px;
     background:var(--surface-2);font-size:14px;border-left:2px solid transparent}
 .fx time{font:11px/1.4 var(--mono);color:var(--ink-faint);min-width:3.2em}

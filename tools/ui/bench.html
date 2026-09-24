@@ -55,8 +55,8 @@
       <h3>Звук и голоса <span>— цветом отмечено, кто говорит; распознанное закрашивается</span></h3>
       <div id="scene-wave"></div>
     </div>
-    <div class="scene" id="scene-fixes" hidden>
-      <h3>Исправления <span>— модель предлагает, код проверяет; порядок по готовности реплик</span></h3>
+    <div class="scene" id="scene-text" hidden>
+      <h3>Текст <span>— сперва печатается по мере распознавания, потом правки идут прямо в нём</span></h3>
     </div>
   </section>
 </main>
@@ -65,11 +65,11 @@
 // Стенд намеренно НЕ переиспользует `app.js`: тот занят сетью и формой. Общее здесь — сами
 // сцены и правила показа, то есть ровно то, что настраивается.
 import { state as showState } from "./play.js";
-import { fixes } from "./fixes.js";
+import { textScene } from "./text.js";
 import { wave } from "./wave.js";
 
 const id = (x) => document.getElementById(x);
-const scenes = { wave: wave(id("scene-wave")), fixes: fixes(id("scene-fixes")) };
+const scenes = { wave: wave(id("scene-wave")), text: textScene(id("scene-text")) };
 let trace = [];
 let at = 0;
 let timer = null;
@@ -94,7 +94,7 @@ function feed(e) {
   if (e.t === "chunk.start") show.counter = { i: e.i, n: e.n };
   if (e.t === "turn.done") show.counter = { i: e.done, n: e.n };
   scenes.wave.apply(e);
-  scenes.fixes.apply(e);
+  scenes.text.apply(e);
 }
 
 function step(n = 1) {
@@ -132,7 +132,7 @@ function reset() {
   at = 0; clock = 0;
   show.stage = ""; show.done = []; show.counter = null; show.error = "";
   scenes.wave.reset();
-  scenes.fixes.reset();
+  scenes.text.reset();
   scenes.wave.fit();
   paint();
 }

@@ -10,7 +10,7 @@
 
 import { $, el, reduced } from "./dom.js";
 import { budget, state as showState } from "./play.js";
-import { fixes } from "./fixes.js";
+import { textScene } from "./text.js";
 import { wave } from "./wave.js";
 
 const T = new URLSearchParams(location.search).get("t") || "";
@@ -33,7 +33,7 @@ let videos = [];
 
 // --- показ работы -----------------------------------------------------------------------------
 
-const scenes = { wave: wave(id("scene-wave")), fixes: fixes(id("scene-fixes")) };
+const scenes = { wave: wave(id("scene-wave")), text: textScene(id("scene-text")) };
 const queue = [];        // события, пришедшие, но ещё не показанные
 let cursor = 0;
 let noEvents = false;    // старый адаптер/сервер без ленты — падаем обратно на лог
@@ -43,7 +43,7 @@ const show = { stage: "", done: [], counter: null, lastAt: 0, error: "" };
 
 function dispatch(e) {
   scenes.wave.apply(e);
-  scenes.fixes.apply(e);
+  scenes.text.apply(e);
   show.lastAt = performance.now() / 1000;
   if (e.t === "stage.start") { show.stage = e.stage; show.counter = null; }
   if (e.t === "stage.end" && !show.done.includes(e.stage)) show.done.push(e.stage);
@@ -296,7 +296,7 @@ id("go").onclick = async () => {
     show.stage = ""; show.done = []; show.counter = null; show.error = "";
     show.lastAt = performance.now() / 1000;
     scenes.wave.reset();
-    scenes.fixes.reset();
+    scenes.text.reset();
     await tick();
   } catch (e) { id("msg").textContent = e.message; id("msg").className = "msg bad"; }
 };

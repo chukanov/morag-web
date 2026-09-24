@@ -441,13 +441,13 @@
     "tools/ui/dom.js": {
       "status": "ours"
     },
-    "tools/ui/fixes.js": {
-      "status": "ours"
-    },
     "tools/ui/fonts.css": {
       "status": "ours"
     },
     "tools/ui/play.js": {
+      "status": "ours"
+    },
+    "tools/ui/text.js": {
       "status": "ours"
     },
     "tools/ui/tokens.css": {
