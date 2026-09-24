@@ -333,6 +333,20 @@ def stack_health() -> dict:
         return {}
 
 
+def warm() -> dict:
+    """Прогреть бэкенды: модели грузятся по первому запросу, а не при старте.
+
+    ⚠️ Без этого первая стадия МОЛЧИТ минутами — человек видит «идёт работа» и ничего
+    больше (живьём: три минуты тишины на первой записи). Греем пока он заполняет поля.
+    """
+    try:
+        with client(ASR_BASE, {}, timeout=900) as c:
+            r = c.post("/warmup")
+        return r.json() if r.status_code == 200 else {}
+    except (httpx.HTTPError, ValueError):
+        return {}
+
+
 def stack(command: str, *, check: bool = True) -> None:
     """Поднять или погасить стек транскрибации.
 

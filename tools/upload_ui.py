@@ -164,6 +164,20 @@ def gateway_from_mirror() -> str:
     return ""
 
 
+def preheat() -> None:
+    """Прогреть модели ФОНОМ, пока человек выбирает файл и заполняет поля.
+
+    Ошибки глотаем намеренно: стек может быть ещё не поднят, и говорить об этом дважды незачем.
+    """
+    def run() -> None:
+        try:
+            if upload.stack_health():
+                upload.warm()
+        except Exception:                               # noqa: BLE001 - прогрев необязателен
+            pass
+    threading.Thread(target=run, daemon=True, name="warmup").start()
+
+
 def choose() -> dict:
     """Системный диалог выбора файла — единственный способ узнать ПУТЬ из браузера.
 
@@ -392,6 +406,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if url.path == "/api/stack":
                 upload.stack("up" if body.get("up") else "down")
+                if body.get("up"):
+                    preheat()
                 self._json({"ok": True})
                 return
             if url.path == "/api/llm":
@@ -421,6 +437,7 @@ def start_server(port: int = 8099) -> tuple[ThreadingHTTPServer, str]:
     """Поднять локальный сервер в отдельном потоке и вернуть его и адрес страницы с токеном.
     Порт занят — берём любой свободный: второе окно не должно падать на первом."""
     Handler.token = secrets.token_urlsafe(16)
+    preheat()                      # стек уже поднят — пусть греется с самого открытия окна
     try:
         server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     except OSError:

@@ -229,11 +229,13 @@ async function tick() {
   const events = site.events || [];
   const sel = id("event");
   if (sel.options.length !== events.length + 1) {
-    // Заглушка видна (иначе непонятно, что поле не заполнено), но выбрать её нельзя: сервер
-    // без рубрики запись не примет — она решает ветку и год.
-    const empty = new Option("— выберите рубрику —", "");
-    empty.disabled = true;
+    // ⚠️⚠️ Заглушка НЕ `disabled`. Браузер выбирает по умолчанию первый ДОСТУПНЫЙ пункт,
+    // и с выключенной заглушкой в поле МОЛЧА вставала первая настоящая рубрика — а она решает
+    // ветку и год, то есть запись уехала бы не туда и без единого вопроса. Пустой значением её
+    // отклонит сервер, сказав, зачем рубрика нужна.
+    const empty = new Option("Неизвестная рубрика", "", true, true);
     sel.replaceChildren(empty, ...events.map((e) => new Option(e, e)));
+    sel.value = "";
   }
   if (!picked) renderRecent(s.videos || []);
 
