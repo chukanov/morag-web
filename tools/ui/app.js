@@ -117,12 +117,40 @@ function pick(v) {
   }
 }
 
+/** Взять файл по пути — его проверяет сервер: есть ли, видео ли, какого размера. */
+async function takePath(raw) {
+  const value = (raw || "").trim();
+  if (!value) return;
+  try {
+    pick(await api("/api/file", { path: value }));
+    id("msg").textContent = "";
+  } catch (error) {
+    id("msg").textContent = error.message;
+  }
+}
+
+/** Поле пути одно и то же в разметке страницы и в пересобранном окошке — поведение вешаем в одном месте. */
+function bindPath(field) {
+  if (!field) return field;
+  field.addEventListener("click", (ev) => ev.stopPropagation());
+  field.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") { ev.preventDefault(); takePath(ev.target.value); }
+  });
+  field.addEventListener("change", (ev) => takePath(ev.target.value));
+  return field;
+}
+
 function resetDrop() {
   const drop = id("drop");
   drop.classList.remove("has");
+  const field = bindPath(el("input", {
+    id: "path", class: "path",
+    placeholder: "или вставьте путь: /Users/…/доклад.mp4",
+  }));
   drop.replaceChildren(
     el("p", { class: "big", text: "Перетащите сюда запись" }),
-    el("p", { class: "hint", text: "или выберите из недавних файлов ниже · mp4, mov, webm, mkv" }));
+    el("p", { class: "hint", text: "можно из недавних файлов ниже · mp4, mov, webm, mkv" }),
+    field);
   id("fields").hidden = true;
   id("recent").hidden = false;
 }
@@ -141,6 +169,8 @@ window.dropVideo = (path) => {
   pick(known || {path, name: path.split("/").pop(), size: 0, mtime: Date.now() / 1000});
 };
 
+bindPath(id("path"));
+
 const drop = id("drop");
 ["dragenter", "dragover"].forEach((e) => drop.addEventListener(e, (ev) => {
   ev.preventDefault(); drop.classList.add("hot");
@@ -148,12 +178,21 @@ const drop = id("drop");
 ["dragleave", "drop"].forEach((e) => drop.addEventListener(e, () => drop.classList.remove("hot")));
 drop.addEventListener("drop", (ev) => {
   ev.preventDefault();
+  // ⚠️⚠️ Брошенный файл браузер отдаёт БЕЗ ПУТИ — только имя и размер, а конвейеру
+  // нужен путь на диске (гигабайты через localhost не гоняем). В нативном окне путь даёт само
+  // окно (`window.dropVideo`), в браузере остаётся три хода, по порядку надёжности.
+  const text = (ev.dataTransfer.getData("text/uri-list") || ev.dataTransfer.getData("text/plain") || "")
+    .split(/[\r\n]+/)[0].trim();
+  if (text.startsWith("file://") || text.startsWith("/")) { takePath(text); return; }
   const f = ev.dataTransfer.files[0];
   if (!f) return;
-  // В браузере пути нет, но файл обычно лежит в тех же папках — ищем по имени и размеру.
   const hit = videos.find((v) => v.name === f.name && Math.abs(v.size - f.size) < 2);
-  if (hit) pick(hit);
-  else id("msg").textContent = `не нашёл «${f.name}» в Загрузках, на Рабочем столе и в Movies — выберите из списка`;
+  if (hit) { pick(hit); return; }
+  // Имя есть, пути нет — честно просим путь и подставляем имя, чтобы дописать осталось папку.
+  const field = id("path");
+  if (field) { field.value = "/…/" + f.name; field.focus(); field.select(); }
+  id("msg").textContent = `«${f.name}» не из Загрузок, Рабочего стола или Movies — браузер путь не сообщает. `
+    + `Вставьте полный путь в поле (в Finder — Alt+Cmd+C копирует его).`;
 });
 drop.addEventListener("click", () => { if (!picked && videos.length) id("recent").scrollIntoView({block: "nearest"}); });
 

@@ -162,6 +162,32 @@ def gateway_from_mirror() -> str:
     return ""
 
 
+def by_path(raw: str) -> dict:
+    """Файл по ПУТИ, вписанному руками или брошенному в поле.
+
+    ⚠️ Без этого страница в БРАУЗЕРЕ была тупиком для всякого, чьё видео лежит не в
+    Загрузках, не на Рабочем столе и не в Movies: брошенный файл браузер отдаёт БЕЗ ПУТИ
+    (только имя и размер), и сопоставить его было не с чем. В нативном окне путь есть
+    (`window.dropVideo`), в браузере — нет, и это не лечится ничем, кроме поля.
+    """
+    raw = raw.strip().strip('"').strip("'")
+    if raw.startswith("file://"):
+        from urllib.parse import unquote, urlparse as _u
+        raw = unquote(_u(raw).path)
+    if not raw:
+        raise upload.Step("путь пустой")
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        raise upload.Step("нужен полный путь, от корня")
+    if not path.is_file():
+        raise upload.Step(f"нет такого файла: {path}")
+    if path.suffix.lower().lstrip(".") not in upload.VIDEO_EXT:
+        raise upload.Step(f"не видео: нужен {', '.join(sorted(upload.VIDEO_EXT))}")
+    st = path.stat()
+    return {"path": str(path), "name": path.name, "size": st.st_size, "mtime": st.st_mtime,
+            "folder": path.parent.name}
+
+
 def start(fields: dict) -> dict:
     """Запустить конвейер в потоке. Второй запуск, пока идёт первый, отклоняется: одна машина —
     одна расшифровка (стек всё равно последователен)."""
@@ -311,6 +337,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"ok": True, "llm": upload.use_site_llm()})
                 except upload.Step as error:
                     self._json({"ok": True, "llm": {"via_site": False, "error": str(error)}})
+                return
+            if url.path == "/api/file":
+                self._json(by_path(str(body.get("path") or "")))
                 return
             if url.path == "/api/start":
                 self._json(start(body))
