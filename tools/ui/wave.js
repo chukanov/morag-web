@@ -75,43 +75,28 @@ export function wave(root) {
     return `rgb(${v[0]} ${v[1]} ${v[2]})`;
   }
 
-  /** Цвет голоса — ТОН с круга, а ступень — ГРОМКОСТЬ этого куска звука.
+  /** Цвет голоса — ТОН с круга, один на весь голос.
    *
-   * Ровная заливка одним цветом смотрится бедно (владелец, 24.09), а свободный градиент был бы
-   * украшением ни о чём. Ступени считаются по ОГИБАЮЩЕЙ, которая и так нарисована.
-   *
-   * ⚠️ Громкое не делаем БЛЕДНЫМ. Первая попытка брала кольца круга напрямую, и так как
-   * речь почти всюду громкая, вся волна вышла пастелью — ещё беднее прежнего. Правило
-   * простое: чем громче, тем ДАЛЬШЕ цвет от фона. Тихое утопает в панели, громкое идёт
-   * чистым тоном круга, самое громкое — соседним кольцом в сторону от фона (на тёмной теме
-   * светлее, на светлой глубже). Голоса сверх двенадцати идут на второй круг со сдвинутым кольцом.
+   * ⚠️ Ступеней по громкости больше НЕТ (владелец, 24.09: «цвета норм, не надо грубой
+   * лесенкой градиента»): дробление одного голоса на оттенки читалось как рябь, а громкость
+   * и так видна — высотой столбиков. Объём даёт ПЛАВНОЕ затенение к низу, а не смена цвета.
+   * На светлой теме берётся кольцо глубже: чистый тон на белом выцветает.
    */
-  const FADE = [0.46, 0.24, 0];        // сколько фона подмешано на трёх нижних ступенях
-
-  function colour(idx, loud = 2) {
+  function colour(idx) {
     const light = document.documentElement.getAttribute("data-theme") === "light";
     const lap = Math.min(1, Math.floor(idx / WHEEL.length));
     const tone = WHEEL[(FIRST + idx * STEP) % WHEEL.length];
-    const base = tone[light ? 2 - lap : 2 + lap];
-    if (loud >= 3) return tone[light ? 3 : 1];        // самое громкое — дальше всего от фона
-    return mix(base, css("--surface-2") || (light ? "#EDF2F6" : "#1E2C3B"), FADE[loud]);
+    return tone[Math.min(3, (light ? 3 : 2) - (light ? lap : -lap))];
   }
 
-  /** Громкость отрезка огибающей четырьмя ступенями. Нет огибающей — средняя ступень. */
-  function loudness(i0, i1) {
-    if (!peaks) return 2;
-    const a = Math.max(0, Math.floor(i0));
-    const b = Math.min(peaks.length, Math.ceil(i1));
-    if (b <= a) return 2;
-    let sum = 0;
-    for (let i = a; i < b; i++) sum += peaks[i];
-    const v = sum / (b - a);
-    return v < 60 ? 0 : v < 115 ? 1 : v < 180 ? 2 : 3;
-  }
-
-  /** Секунда → номер столбика огибающей. */
-  function bar(sec) {
-    return !peaks || !audioSec ? 0 : (sec / audioSec) * peaks.length;
+  /** Вертикальный перелив от тона к его тени: плоская заливка смотрится бедно. */
+  function shaded(ctx, idx, y0, y1) {
+    const base = colour(idx);
+    const g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, mix(base, "#FFFFFF", 0.14));
+    g.addColorStop(0.45, base);
+    g.addColorStop(1, mix(base, "#000000", 0.45));
+    return g;
   }
 
   function fit() {
@@ -156,18 +141,18 @@ export function wave(root) {
         ? 1
         : Math.min(1, (performance.now() - revealFrom) / REVEAL_MS);
       const eased = 1 - (1 - done) ** 3;
-      // ⚠️ Реплика заливается НЕ ОДНИМ цветом, а шагами по громкости: ровная полоса выглядит
-      // бедно, а ступени показывают, где говорили в полный голос, а где роняли в сторону.
-      const stepPx = Math.max(3, W / 240);
+      // ⚠️ Между репликами — белая граница в два пикселя (владелец, 24.09): без неё соседние
+      // куски одного цвета сливаются в одно пятно и по ленте не видно, где менялись реплики.
+      const seam = Math.max(1, Math.round(2 * (canvas.width / (canvas.clientWidth || canvas.width))));
       for (const [a, b, idx] of spans) {
         const x0 = (a / audioSec) * W;
         const x1 = Math.min((b / audioSec) * W, W * eased);
         if (x0 > W * eased) break;
-        for (let x = x0; x < x1; x += stepPx) {
-          const t0 = (x / W) * audioSec;
-          const t1 = (Math.min(x + stepPx, x1) / W) * audioSec;
-          ctx.fillStyle = colour(idx, loudness(bar(t0), bar(t1)));
-          ctx.fillRect(x, ribbonY, Math.max(1, Math.min(x + stepPx, x1) - x), ribbonH);
+        ctx.fillStyle = shaded(ctx, idx, ribbonY, ribbonY + ribbonH);
+        ctx.fillRect(x0, ribbonY, Math.max(1, x1 - x0), ribbonH);
+        if (x0 > 0.5) {
+          ctx.fillStyle = "rgba(255,255,255,.92)";
+          ctx.fillRect(x0 - seam / 2, ribbonY, seam, ribbonH);
         }
       }
       if (done < 1) dirty = true;
@@ -178,12 +163,8 @@ export function wave(root) {
       for (const [a, b, idx] of live) {
         const i0 = Math.max(0, Math.floor((a / audioSec) * n));
         const i1 = Math.min(n, Math.ceil((b / audioSec) * n));
-        // Столбик красится по СВОЕЙ громкости (сглаженной по соседям, иначе цвет рябит) —
-        // внутри одного куска получается ступенчатый перелив, а не плоская заливка.
-        let ring = -1;
+        ctx.fillStyle = shaded(ctx, idx, 0, waveH);
         for (let i = i0; i < i1; i++) {
-          const now = loudness(i - 2, i + 3);
-          if (now !== ring) { ring = now; ctx.fillStyle = colour(idx, now); }
           const v = (peaks[i] / 255) * waveH;
           ctx.fillRect(i * bw, (waveH - v) / 2, Math.max(1, bw - 0.6), Math.max(1, v));
         }

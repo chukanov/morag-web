@@ -190,44 +190,27 @@ const { textScene } = await import(join(repo, "tools/ui/text.js"));
                 why: "breaks_term", term: "Мария Ковалёва" });
   flush();
 
-  // ⚠️ Правка остаётся в тексте КОРРЕКТУРОЙ: старое слово никуда не девается (оно зачёркнуто),
-  // а замена надписана сверху. Так видно и что было, и что предложили, и почему не приняли.
-  const shown = scene.state().text;
-  assert.match(shown, /эйр флоу/, "старое слово остаётся — его зачёркивают, а не стирают");
-  assert.match(shown, /Airflow/, "замена надписана над ним");
-  assert.match(shown, /H200/, "отвергнутая замена исходное слово не трогает");
+  // ⚠️ В тексте остаётся ИСПРАВЛЕННОЕ слово, а прежнее уходит в слой над текстом и
+  // всплывает по наведению: конец работы — готовая расшифровка, а не лист корректуры.
   assert.equal(scene.state().edits, 3, "все три правки легли в текст");
 
   const all = [];
   (function walk(node) {
     for (const kid of node.kids || []) if (kid instanceof El) { all.push(kid); walk(kid); }
   })(root);
-  const ruby = all.filter((n) => n.tagName === "RUBY");
-  assert.equal(ruby.length, 3, "каждая правка — своя корректура");
-  assert.ok(ruby.some((r) => r.classList.contains("no")), "отвергнутые помечены отдельно");
+  const cls = (c) => all.filter((n) => n.classList.contains(c)).map((n) => n.textContent);
 
-  // ⚠️ Причина лежит под знаком ⓘ и НЕ показана, пока её не спросили: развёрнутая
-  // фраза длиннее самой правки и перетягивает внимание. У принятой правки знака нет вовсе —
-  // объяснять нечего.
-  const eyes = all.filter((n) => n.classList.contains("ed-i"));
-  const whys = all.filter((n) => n.classList.contains("ed-why"));
-  assert.equal(eyes.length, 2, "знак только там, где есть что сказать");
-  assert.equal(eyes[0].textContent, "ⓘ", "и это ОДИН символ-пиктограмма");
-  assert.equal(whys.length, 2);
-  assert.ok(whys.every((w) => "hidden" in w.attrs), "пока не спросили — фразы не видно");
-  assert.match(whys.map((w) => w.textContent).join(" "), /меняет число/);
-  assert.match(whys.map((w) => w.textContent).join(" "), /сломало бы известный термин.*Мария Ковалёва/,
-               "и какой именно термин сломался бы — там же, а не в строке");
-  const host = ruby.find((r) => r.kids.some((k) => (k.kids || []).some((x) => x === eyes[0])));
-  for (const fn of eyes[0]._on.click || []) fn({});
-  assert.ok(!("hidden" in whys[0].attrs), "нажали — фраза появилась");
-  assert.equal(eyes[0].attrs["aria-expanded"], "true");
-  // ⚠️ Надпись видна по наведению, а пока справка раскрыта — держится и без курсора:
-  // иначе она угаснет раньше, чем человек дочитает фразу.
-  assert.ok(host && host.classList.contains("open"), "раскрытая справка держит надпись");
-  for (const fn of eyes[0]._on.click || []) fn({});
-  assert.ok("hidden" in whys[0].attrs, "нажали ещё раз — убралась");
-  assert.ok(!host.classList.contains("open"), "и надпись больше не держится");
+  assert.equal(all.filter((n) => n.tagName === "RUBY").length, 3, "каждая правка — свой узел");
+  assert.deepEqual(cls("ed-now"), ["Airflow"], "принятая правка — это новое слово в тексте");
+  assert.deepEqual(cls("ed-kept"), ["H200", "Ковалёв"], "отвергнутая текст не меняет вовсе");
+
+  const over = cls("ed-old");
+  assert.equal(over.length, 3, "слой есть у каждой");
+  assert.match(over[0], /было: эйр флоу/, "у принятой в слое — старое слово");
+  assert.match(over[1], /не принято: H100/, "у отвергнутой — что предлагали…");
+  assert.match(over[1], /меняет число/, "…и почему не взяли");
+  assert.match(over[2], /сломало бы известный термин.*Мария Ковалёва/, "и какой именно термин");
+  assert.ok(!all.some((n) => n.classList.contains("ed-i")), "знака ⓘ больше нет — причина в том же слое");
 
   scene.apply({ t: "turn.done", turn: 0, start: 61, n: 5, changed: true });
   assert.equal(scene.state().turns, 5);

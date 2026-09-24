@@ -60,16 +60,16 @@ def test_reduced_motion_is_honoured_in_css_and_in_js():
     assert "reduced()" in (UI / "wave.js").read_text(encoding="utf-8")
 
 
-def test_the_correction_label_lives_over_the_text_and_only_on_hover():
-    """⚠️ Надпись над словом НЕ висит постоянно и НЕ входит в поток.
+def test_the_old_word_lives_over_the_text_and_only_on_hover():
+    """⚠️ Слой с прежним словом НЕ висит постоянно и НЕ входит в поток.
 
     Оба свойства куплены на живом показе: в потоке `ruby` раздвигала слово под ширину
-    надписи и строка расползалась дырами, а постоянный слой надписей делал текст рябым
+    надписи и строка расползалась дырами, а постоянный слой делал текст рябым
     (решения владельца 24.09).
     """
     css = (UI / "upload.css").read_text(encoding="utf-8")
-    rule = css[css.index(".ed-new{"):]
+    rule = css[css.index(".ed-old{"):]
     rule = rule[: rule.index("}")]
-    assert "position:absolute" in rule, "надпись вне потока"
-    assert "opacity:0" in rule, "сама по себе не видна"
-    assert ".ed:hover .ed-new" in css, "показывается по наведению"
+    assert "position:absolute" in rule, "слой вне потока"
+    assert "opacity:0" in rule, "сам по себе не виден"
+    assert ".ed:hover .ed-old" in css, "показывается по наведению"

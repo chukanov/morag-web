@@ -88,36 +88,25 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
         box-shadow:0 0 0 3px var(--accent-wash);animation:tx-pulse 1s ease-in-out infinite}
 @keyframes tx-pulse{0%,100%{box-shadow:0 0 0 3px var(--accent-wash)}
                     50%{box-shadow:0 0 0 7px var(--accent-wash)}}
+/* Зачёркивание — отдельный шаг перед заменой: мгновенная подмена читается как опечатка
+   показа — глаз не успевает увидеть, что именно исправили. */
+.tx-hit.cut{text-decoration:line-through var(--bad);text-decoration-thickness:2px}
 
-/* Корректура: старое слово остаётся в тексте с пометкой, а замена живёт СЛОЕМ НАД ТЕКСТОМ.
-   ⚠️ Надпись вынута ИЗ ПОТОКА (`position:absolute`), хотя разметка и `ruby`: сама ruby
-   раздвигает слово под ширину надписи, и строка расползалась дырами в полстроки.
-   ⚠️ Показывается ПО НАВЕДЕНИЮ (владелец, 24.09): постоянный слой надписей делает
-   страницу рябой. Сама собой она видна дважды: в момент замены (`fresh`) и пока
-   раскрыта справка (`open`). */
+/* В тексте остаётся ИСПРАВЛЕННОЕ слово — оранжевым; прежнее уходит в слой над текстом
+   и всплывает по наведению (владелец, 24.09): конец работы — готовая расшифровка, а не лист
+   корректуры.
+   ⚠️ Слой вынут ИЗ ПОТОКА (`position:absolute`), хотя разметка и `ruby`: сама ruby раздвигает
+   слово под ширину надписи, и строка расползалась дырами в полстроки. */
 .ed{display:inline-block;position:relative}
-.ed-was{color:var(--ink-dim);text-decoration:line-through var(--bad)}
-/* ⚠️ У ОТВЕРГНУТОЙ правки слово не зачёркнуто — оно осталось как было. Без своей пометки
-   оно стало бы неотличимо от обычного: наводить на него было бы незачем и некуда. */
-.ed.no .ed-was{color:var(--ink);text-decoration:underline dotted var(--bad);text-underline-offset:3px}
-.ed-new{position:absolute;left:0;bottom:100%;display:block;white-space:nowrap;z-index:3;
-        font:600 11px/1.2 var(--mono);color:var(--bad);letter-spacing:.02em;
+.ed-now{color:var(--bad)}
+/* ⚠️ Отвергнутая правка текст НЕ меняет вовсе. Без своей пометки такое слово неотличимо
+   от обычного: наводить на него было бы незачем и некуда. */
+.ed.no .ed-kept{text-decoration:underline dotted var(--bad);text-underline-offset:3px}
+.ed-old{position:absolute;left:0;bottom:100%;display:block;white-space:nowrap;z-index:3;
+        font:11px/1.3 var(--mono);color:var(--ink-dim);background:var(--surface);
+        border:1px solid var(--line);border-radius:6px;padding:2px 7px;box-shadow:var(--shadow-sm);
         opacity:0;pointer-events:none;transition:opacity .14s ease-out}
-.ed:hover .ed-new,.ed.open .ed-new,.ed.fresh .ed-new{opacity:1;pointer-events:auto}
-.ed.no .ed-new{text-decoration:line-through;opacity:0}
-.ed.no:hover .ed-new,.ed.no.open .ed-new,.ed.no.fresh .ed-new{opacity:.85}
-
-/* Почему не приняли — под знаком ⓘ рядом с заменой: фраза длиннее самой правки и
-   перетягивает внимание на себя. Раскрывается там же, над текстом, пузырьком поверх строк. */
-.ed-i{appearance:none;background:none;border:0;padding:0 0 0 3px;cursor:pointer;
-      font:12px/1 var(--mono);color:var(--bad);vertical-align:baseline;text-decoration:none}
-.ed-i:hover{opacity:.75}
-.ed-i[aria-expanded=true]{color:var(--ink-dim)}
-.ed-why{display:inline-block;max-width:280px;white-space:normal;vertical-align:top;
-        font:10px/1.35 var(--mono);color:var(--ink-dim);background:var(--surface);
-        border:1px solid var(--line);border-radius:6px;padding:2px 6px;margin-left:4px;
-        box-shadow:var(--shadow-sm);text-decoration:none;position:relative;z-index:2}
-.ed-why[hidden]{display:none}
+.ed:hover .ed-old,.ed.fresh .ed-old{opacity:1}
 
 /* исправления */
 .fx-count{font:12px/1.5 var(--mono);color:var(--ink-dim);margin:0}
