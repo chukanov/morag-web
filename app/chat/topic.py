@@ -49,6 +49,27 @@ class TopicMaker:
             )
         return self._client
 
+    async def reachable(self, timeout: float = 5.0) -> bool | None:
+        """Отвечает ли вообще LLM-эндпоинт. `None` — спросить не у кого (ключа нет).
+
+        ⚠️ Зачем это здесь, а не в мораге: когда движок молчит, человек видит «не получилось» и
+        не может отличить «упал поиск» от «лёг LLM-шлюз». Инциденты 17–18.09 стоили часа именно
+        на этом различении. Спрашиваем ДЕШЁВОЕ (`/models`) и только на пути ошибки — здоровому
+        ответу этот запрос не достаётся никогда.
+
+        ⓘ Это тот же эндпоинт, которым мы делаем тему. Если у движка он другой, ответ говорит
+        «сеть до LLM живая», и это всё равно больше, чем ничего.
+        """
+        if not self.key:
+            return None
+        try:
+            answer = await self._http().get("/models", timeout=timeout)
+        except httpx.HTTPError as exc:
+            log.warning("LLM-эндпоинт не отвечает: %s", type(exc).__name__)
+            return False
+        # 401/403 — ключ, а не сеть: эндпоинт ЖИВ, и валить на него ответ движка нечестно.
+        return answer.status_code < 500
+
     async def aclose(self) -> None:
         if self._client is not None:
             await self._client.aclose()

@@ -34,6 +34,19 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
+
+def short(path: Path) -> str:
+    """Путь для человека. ⚠️ Не `relative_to` от каталога платформы: корпус лежит ОТДЕЛЬНО от
+    неё (так устроено разделение), и снимок собирался, а инструмент падал на последней строке —
+    при печати имени только что записанного файла."""
+    for base in (Path.cwd(), REPO, Path.home()):
+        try:
+            rel = path.relative_to(base)
+        except ValueError:
+            continue
+        return ("~/" + str(rel)) if base == Path.home() else str(rel)
+    return str(path)
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import spaces  # noqa: E402
 
@@ -233,11 +246,11 @@ def main() -> int:
     if args.scan:
         data = scan()
         OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        print(f"снимок собран: {OUT.relative_to(REPO)}\n")
+        print(f"снимок собран: {short(OUT)}\n")
     elif OUT.is_file():
         data = json.loads(OUT.read_text(encoding="utf-8"))
     else:
-        print(f"нет {OUT.relative_to(REPO)} — соберите: python3 tools/voices.py --scan")
+        print(f"нет {short(OUT)} — соберите: python3 tools/voices.py --scan")
         return 1
     summary(data)
     return 0

@@ -33,6 +33,22 @@ HEARTBEAT_AFTER = 15.0  # сек тишины, после которых шлё�
 ENGINE_DOWN = "Движок сейчас недоступен. Попробуйте чуть позже."
 ENGINE_SLOW = "Движок молчит слишком долго. Попробуйте переспросить."
 NOTHING = "Движок вернул пустой ответ. Попробуйте переформулировать вопрос."
+# ⚠️ Отдельное слово про LLM — не украшение. Движок молчит по двум разным причинам: упал он сам
+# или лёг LLM-эндпоинт за ним, и снаружи это ОДИН И ТОТ ЖЕ «не получилось». Инциденты 17–18.09
+# ушли на то, чтобы различить их руками; теперь на пути ошибки мы спрашиваем сам эндпоинт.
+LLM_DOWN = "LLM-шлюз не отвечает — поиск временно без ответов. Мы уже знаем, попробуйте позже."
+
+
+async def _failure(state, generic: str) -> str:
+    """Что показать человеку, когда движок не ответил: общее слово или про LLM-шлюз."""
+    try:
+        alive = await state.topic.reachable()
+    except Exception:  # диагностика не имеет права заменить собой ошибку  # noqa: BLE001
+        return generic
+    if alive is False:
+        log.error("движок молчит И LLM-эндпоинт не отвечает — причина, похоже, в шлюзе")
+        return LLM_DOWN
+    return generic
 
 
 def _client_ip(request: Request, hops: int) -> str | None:
@@ -176,7 +192,7 @@ async def ask(request: Request, payload: AskRequest):
                         body = (await response.aread())[:500].decode("utf-8", "replace")
                         log.error("движок ответил %s: %s", response.status_code, body)
                         status = "error"
-                        yield frames.encode(frames.error(ENGINE_DOWN))  # тело наружу не отдаём
+                        yield frames.encode(frames.error(await _failure(state, ENGINE_DOWN)))  # тело наружу не отдаём
                         return
                     last = time.monotonic()
                     async for event in iter_events_from_bytes(response.aiter_bytes()):
@@ -195,12 +211,12 @@ async def ask(request: Request, payload: AskRequest):
             except (httpx.ConnectError, httpx.ConnectTimeout):
                 status = "error"
                 log.warning("движок недоступен: %s", cfg.engine.base_url)
-                yield frames.encode(frames.error(ENGINE_DOWN))
+                yield frames.encode(frames.error(await _failure(state, ENGINE_DOWN)))
                 return
             except (httpx.ReadTimeout, httpx.RemoteProtocolError) as exc:
                 status = "error"
                 log.warning("поток движка оборвался: %s", type(exc).__name__)
-                yield frames.encode(frames.error(ENGINE_SLOW))
+                yield frames.encode(frames.error(await _failure(state, ENGINE_SLOW)))
                 return
 
             if norm.tokens == 0 and status == "ok":

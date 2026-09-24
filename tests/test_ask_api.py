@@ -17,6 +17,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -205,3 +206,47 @@ def test_свой_адрес_видео_перебивает_file_от_движ�
     citation = next(f for f in frames if f["type"] == "citation")
     assert not citation["url"].startswith("file://"), "адрес движка перебил наш"
     assert citation["rec"], "цитата не разрешилась в запись демо-корпуса"
+
+
+class _DeadEngine:
+    """Движок, который не отвечает вовсе — как при упавшем контейнере или лёгшем LLM за ним."""
+
+    @asynccontextmanager
+    async def stream_chat(self, messages):
+        raise httpx.ConnectError("connection refused")
+        yield  # pragma: no cover — до сюда не доходит, но делает функцию генератором
+
+    async def aclose(self):
+        pass
+
+
+@pytest.mark.parametrize("llm_alive, expect", [(True, "Движок"), (False, "LLM-шлюз")])
+def test_молчащий_движок_отличает_себя_от_молчащего_LLM(client, monkeypatch, llm_alive, expect):
+    """⚠️ Снаружи «упал поиск» и «лёг LLM-шлюз» — одно и то же «не получилось», и различать их
+    приходилось руками: два инцидента 17–18.09 ушли на это целиком. Теперь на пути ОШИБКИ (и
+    только там) сайт спрашивает сам LLM-эндпоинт и называет причину."""
+    c, slug, _ = client
+    app.state.engines[slug] = _DeadEngine()
+
+    async def reachable(timeout: float = 5.0):
+        return llm_alive
+
+    monkeypatch.setattr(app.state.topic, "reachable", reachable)
+    frames = _frames(c.post("/api/ask", json={"question": "что там?", "corpus": slug}))
+    errors = [f for f in frames if f.get("type") == "error"]
+    assert errors, "молчащий движок обязан сказать об этом кадром ошибки"
+    assert expect in errors[0]["message"], errors[0]["message"]
+
+
+def test_если_спросить_LLM_не_у_кого_ответ_прежний(client, monkeypatch):
+    """Диагностика не имеет права заменить собой ошибку: не настроен ключ (`reachable` → None)
+    или сама проба упала — человек видит обычное «движок недоступен», а не молчание."""
+    c, slug, _ = client
+    app.state.engines[slug] = _DeadEngine()
+
+    async def broken(timeout: float = 5.0):
+        raise RuntimeError("проба сама сломалась")
+
+    monkeypatch.setattr(app.state.topic, "reachable", broken)
+    frames = _frames(c.post("/api/ask", json={"question": "что там?", "corpus": slug}))
+    assert any("Движок" in f.get("message", "") for f in frames if f.get("type") == "error")

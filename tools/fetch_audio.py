@@ -7,7 +7,7 @@
 звуку и `speaker_map` сайдкаров. `video_batch.py` сохраняет звук сам, а этот инструмент добирает
 записи, пройденные до того, как он начал это делать, и вообще любые по списку.
 
-  python3 tools/fetch_audio.py --missing          # всем записям с видео, у которых flac ещё нет
+  python3 <morag-web>/tools/fetch_audio.py --missing          # всем записям с видео, у которых flac ещё нет
   python3 tools/fetch_audio.py --missing --done   # только тем, что уже прошли конвейер экрана
   python3 tools/fetch_audio.py --id <id> [--id …] # по списку
 """
@@ -19,8 +19,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+# ⚠️ Шима соседнего репозитория здесь БОЛЬШЕ НЕТ: инструмент переехал в morag-web и лежит рядом
+# с тем, что импортирует. Оставшийся `import _web` делал его незапускаемым иначе как из каталога
+# корпуса (`ModuleNotFoundError: _web`) — а докстрока звала запускать как обычный скрипт.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import _web  # noqa: E402, F401 — общие инструменты из соседнего morag-web
 from make_slides_md import read_header  # noqa: E402
 from video_batch import HOST, server_path  # noqa: E402
 

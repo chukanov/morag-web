@@ -182,3 +182,17 @@ def test_снимок_читается_даже_когда_правка_выкл
     app.state.cfg.editing.enabled = False
     body = client.get("/api/voices").json()
     assert body["editing"] is False and "voices" in body
+
+
+def test_the_tool_can_name_a_file_that_lies_outside_the_platform(tmp_path):
+    """⚠️ Снимок собирается в КОРПУС, а корпус лежит отдельно от платформы — так устроено
+    разделение. Печать имени записанного файла делалась через `relative_to` каталога платформы
+    и роняла инструмент на последней строке: снимок собран, а человек видит трассировку и не
+    знает, собран он или нет."""
+    sys.path.insert(0, str(REPO / "tools"))
+    import voices as tool
+
+    outside = tmp_path / "corpora" / "mesto" / "voices.json"
+    assert tool.short(outside).endswith("voices.json"), "путь вне платформы печатается, а не падает"
+    assert tool.short(REPO / "tools" / "voices.py") == "tools/voices.py" or \
+           tool.short(REPO / "tools" / "voices.py").endswith("tools/voices.py")
