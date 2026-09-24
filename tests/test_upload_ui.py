@@ -1,4 +1,4 @@
-"""Локальная страница загрузки (`tools/ingest_ui.py`): что она отдаёт и кого не пускает.
+"""Локальная страница загрузки (`tools/upload_ui.py`): что она отдаёт и кого не пускает.
 
 Главное, что здесь закреплено: **токен и чужой origin**. Сервер слушает петлю, но петля от
 чужих вкладок не защищает: страница любого сайта, открытая в том же браузере, может постучаться
@@ -21,17 +21,17 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 
-import ingest  # noqa: E402
-import ingest_ui  # noqa: E402
+import upload  # noqa: E402
+import upload_ui  # noqa: E402
 
 
 @pytest.fixture
 def server(tmp_path, monkeypatch):
     """Поднятый сервер на свободном порту; сайт и стек — заглушками, конвейер не запускается."""
-    monkeypatch.setattr(ingest_ui, "FOLDERS", [tmp_path / "Downloads"])
-    monkeypatch.setattr(ingest, "HOME", tmp_path / "work")
-    monkeypatch.setattr(ingest, "stack_health", lambda: {"status": "ok"})
-    monkeypatch.setattr(ingest_ui, "site_state", lambda: {"site": "https://site.example.org", "logged": True,
+    monkeypatch.setattr(upload_ui, "FOLDERS", [tmp_path / "Downloads"])
+    monkeypatch.setattr(upload, "HOME", tmp_path / "work")
+    monkeypatch.setattr(upload, "stack_health", lambda: {"status": "ok"})
+    monkeypatch.setattr(upload_ui, "site_state", lambda: {"site": "https://site.example.org", "logged": True,
                                                           "events": ["Доклады", "Встречи"]})
     downloads = tmp_path / "Downloads"
     (downloads / "Встречи").mkdir(parents=True)
@@ -41,9 +41,9 @@ def server(tmp_path, monkeypatch):
     time.sleep(0.01)
     (downloads / "talk.mp4").touch()   # свежайшее — должно быть первым
 
-    ingest_ui.STATE.update({"stage": "idle", "id": "", "error": "", "url": ""})
-    ingest_ui.Handler.token = "tok"
-    httpd = ingest_ui.ThreadingHTTPServer(("127.0.0.1", 0), ingest_ui.Handler)
+    upload_ui.STATE.update({"stage": "idle", "id": "", "error": "", "url": ""})
+    upload_ui.Handler.token = "tok"
+    httpd = upload_ui.ThreadingHTTPServer(("127.0.0.1", 0), upload_ui.Handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
@@ -103,7 +103,7 @@ def test_start_checks_fields_before_doing_anything(server):
     for fields, expect in bad:
         code, body = post(f"{base}/api/start?t=tok", fields)
         assert code == 400 and expect in body["error"], (fields, body)
-    assert ingest_ui.STATE["stage"] == "idle", "ни один отказ не оставил состояние «в работе»"
+    assert upload_ui.STATE["stage"] == "idle", "ни один отказ не оставил состояние «в работе»"
 
 
 def test_start_runs_the_pipeline_once_and_reports(server, monkeypatch):
@@ -116,8 +116,8 @@ def test_start_runs_the_pipeline_once_and_reports(server, monkeypatch):
         release.wait(5)
         return "2026-03-12-kafka-bez-boli"
 
-    monkeypatch.setattr(ingest, "pipeline", fake_pipeline)
-    monkeypatch.setattr(ingest, "load_session", lambda site=None: ("https://site.example.org", {"c": "1"}))
+    monkeypatch.setattr(upload, "pipeline", fake_pipeline)
+    monkeypatch.setattr(upload, "load_session", lambda site=None: ("https://site.example.org", {"c": "1"}))
     fields = {"video": str(tmp / "Downloads" / "talk.mp4"), "title": "Kafka без боли", "date": "2026-03-12",
               "event": "Доклады", "speakers": "Мария Кузнецова, ", "tags": "kafka", "summary": "о чём",
               "no_screen": True}
@@ -135,23 +135,23 @@ def test_start_runs_the_pipeline_once_and_reports(server, monkeypatch):
 
     release.set()
     for _ in range(50):
-        if ingest_ui.STATE["stage"] == "done":
+        if upload_ui.STATE["stage"] == "done":
             break
         time.sleep(0.05)
-    assert ingest_ui.STATE["stage"] == "done" and len(calls) == 1
+    assert upload_ui.STATE["stage"] == "done" and len(calls) == 1
 
 
 def test_failure_is_shown_not_swallowed(server, monkeypatch):
     base, tmp = server
 
     def boom(video, **kw):
-        raise ingest.Step("стек транскрибации не отвечает")
+        raise upload.Step("стек транскрибации не отвечает")
 
-    monkeypatch.setattr(ingest, "pipeline", boom)
+    monkeypatch.setattr(upload, "pipeline", boom)
     post(f"{base}/api/start?t=tok", {"video": str(tmp / "Downloads" / "talk.mp4"), "title": "Норм",
                                      "date": "2026-03-12", "event": "Доклады"})
     for _ in range(50):
-        if ingest_ui.STATE["stage"] == "error":
+        if upload_ui.STATE["stage"] == "error":
             break
         time.sleep(0.05)
     job = get(f"{base}/api/state?t=tok")[1]["job"]
@@ -171,9 +171,9 @@ def test_site_session_becomes_the_gateway_credential(server, tmp_path, monkeypat
     for name in ("OR_KEY", "ASR_LLM_BASE_URL", "ASR_LLM_MODEL"):
         monkeypatch.delenv(name, raising=False)
     stack_calls: list[str] = []
-    monkeypatch.setattr(ingest, "stack", lambda cmd: stack_calls.append(cmd))
-    monkeypatch.setattr(ingest, "stack_health", lambda: {"status": "ok"})
-    monkeypatch.setattr(ingest, "load_session",
+    monkeypatch.setattr(upload, "stack", lambda cmd: stack_calls.append(cmd))
+    monkeypatch.setattr(upload, "stack_health", lambda: {"status": "ok"})
+    monkeypatch.setattr(upload, "load_session",
                         lambda site: ("https://site.example.org", {"morag_session": "eyJzdWIi.c2lnbg"}))
 
     import httpx
@@ -182,24 +182,24 @@ def test_site_session_becomes_the_gateway_credential(server, tmp_path, monkeypat
 
     def fake(request: httpx.Request) -> httpx.Response:
         seen[request.url.path] = dict(request.headers)
-        if request.url.path == "/api/ingest/options":
-            return httpx.Response(200, json={"events": [], "llm": {"via_site": True, "path": "/api/ingest/llm",
+        if request.url.path == "/api/upload/options":
+            return httpx.Response(200, json={"events": [], "llm": {"via_site": True, "path": "/api/upload/llm",
                                                                    "model": "Instruct", "cookie": "morag_session"}})
         return httpx.Response(200, json={"data": []})
 
-    monkeypatch.setattr(ingest, "TRANSPORT", httpx.MockTransport(fake))
+    monkeypatch.setattr(upload, "TRANSPORT", httpx.MockTransport(fake))
     code, body = post(f"{base}/api/llm?t=tok", {})
     assert code == 200 and body == {"via_site": True, "checked": True}
 
     text = env_file.read_text(encoding="utf-8")
     assert "OR_KEY=eyJzdWIi.c2lnbg" in text, "удостоверение — сама сессия сайта"
-    assert "ASR_LLM_BASE_URL=https://site.example.org/api/ingest/llm" in text
+    assert "ASR_LLM_BASE_URL=https://site.example.org/api/upload/llm" in text
     assert "ASR_LLM_MODEL=Instruct" in text
     assert oct(env_file.stat().st_mode & 0o777) == "0o600"
     assert stack_calls == ["down"]
-    assert seen["/api/ingest/llm/models"]["authorization"] == "Bearer eyJzdWIi.c2lnbg", "проверка тем же удостоверением"
-    assert ingest_ui.llm_state() == {"ready": True, "via_site": True,
-                                    "base": "https://site.example.org/api/ingest/llm"}
+    assert seen["/api/upload/llm/models"]["authorization"] == "Bearer eyJzdWIi.c2lnbg", "проверка тем же удостоверением"
+    assert upload_ui.llm_state() == {"ready": True, "via_site": True,
+                                    "base": "https://site.example.org/api/upload/llm"}
     assert get(f"{base}/api/state?t=tok")[1]["llm"]["via_site"] is True
 
 
@@ -209,17 +209,17 @@ def test_own_key_stays_as_a_fallback_and_restores_the_direct_address(server, tmp
     вышло бы «ключ вписан, а ничего не работает»."""
     base, tmp = server
     env_file = tmp / "asr.env"
-    env_file.write_text("ASR_LLM_BASE_URL=https://site.example.org/api/ingest/llm\nOR_KEY=eyJzdWIi.c2lnbg\n",
+    env_file.write_text("ASR_LLM_BASE_URL=https://site.example.org/api/upload/llm\nOR_KEY=eyJzdWIi.c2lnbg\n",
                         encoding="utf-8")
     monkeypatch.setenv("ASR_STACK_ENV", str(env_file))
     for name in ("OR_KEY", "ASR_LLM_BASE_URL"):
         monkeypatch.delenv(name, raising=False)
-    home = tmp / "morag-ingest"
+    home = tmp / "morag-upload"
     home.mkdir()
     (home / "gateway.env").write_text("ASR_LLM_BASE_URL=https://llm.example.org/api\n", encoding="utf-8")
-    monkeypatch.setenv("MORAG_INGEST_HOME", str(home))
-    monkeypatch.setattr(ingest, "stack", lambda cmd: None)
-    monkeypatch.setattr(ingest, "stack_health", lambda: None)
+    monkeypatch.setenv("MORAG_UPLOAD_HOME", str(home))
+    monkeypatch.setattr(upload, "stack", lambda cmd: None)
+    monkeypatch.setattr(upload, "stack_health", lambda: None)
 
     code, body = post(f"{base}/api/key?t=tok", {"key": "  свой-ключ  "})
     assert code == 200 and body["ok"] is True
@@ -227,7 +227,7 @@ def test_own_key_stays_as_a_fallback_and_restores_the_direct_address(server, tmp
     assert "OR_KEY=свой-ключ" in text and "eyJzdWIi" not in text
     assert "ASR_LLM_BASE_URL=https://llm.example.org/api" in text, "адрес вернулся на сам шлюз"
     assert text.count("OR_KEY=") == 1 and text.count("ASR_LLM_BASE_URL=") == 1
-    assert ingest_ui.llm_state()["via_site"] is False
+    assert upload_ui.llm_state()["via_site"] is False
     assert post(f"{base}/api/key?t=tok", {"key": "   "})[0] == 400, "пустой ключ не принимаем"
 
 
@@ -238,18 +238,18 @@ def test_rubric_is_asked_before_the_work_not_after(server, tmp_path):
     fields = {"video": str(tmp / "Downloads" / "talk.mp4"), "title": "Норм", "date": "2026-03-12"}
     code, body = post(f"{base}/api/start?t=tok", fields)
     assert code == 400 and "рубрик" in body["error"]
-    assert ingest_ui.STATE["stage"] == "idle", "работа не началась"
+    assert upload_ui.STATE["stage"] == "idle", "работа не началась"
 
 
 def test_reset_clears_the_finished_job_but_not_a_running_one(server):
     base, _ = server
-    ingest_ui.STATE.update({"stage": "done", "id": "rec", "url": "https://site/rec"})
-    ingest.LOG.append("строка")
+    upload_ui.STATE.update({"stage": "done", "id": "rec", "url": "https://site/rec"})
+    upload.LOG.append("строка")
     assert post(f"{base}/api/reset?t=tok", {})[0] == 200
-    assert ingest_ui.STATE["stage"] == "idle" and not ingest.LOG
-    ingest_ui.STATE.update({"stage": "running"})
+    assert upload_ui.STATE["stage"] == "idle" and not upload.LOG
+    upload_ui.STATE.update({"stage": "running"})
     assert post(f"{base}/api/reset?t=tok", {})[0] == 400, "идущую работу не сбрасываем"
-    ingest_ui.STATE.update({"stage": "idle"})
+    upload_ui.STATE.update({"stage": "idle"})
 
 
 def test_page_has_the_drop_zone_and_the_native_hook(server):
@@ -264,10 +264,10 @@ def test_page_has_the_drop_zone_and_the_native_hook(server):
 
 def test_window_falls_back_to_the_browser_without_pyobjc(monkeypatch):
     """Нет PyObjC (не мак, урезанный питон) — не отказ, а прежняя страница в браузере."""
-    import ingest_app
+    import upload_app
 
     monkeypatch.setitem(sys.modules, "Cocoa", None)
-    monkeypatch.setattr(ingest_app, "available", lambda: False)
+    monkeypatch.setattr(upload_app, "available", lambda: False)
     called = {}
 
     def fake_serve(port, open_browser):
@@ -275,7 +275,7 @@ def test_window_falls_back_to_the_browser_without_pyobjc(monkeypatch):
         called["browser"] = open_browser
         return 0
 
-    monkeypatch.setattr(ingest_ui, "serve", fake_serve)
-    sys.argv = ["ingest.py", "app", "--port", "8123"]
-    assert ingest.main() == 0
+    monkeypatch.setattr(upload_ui, "serve", fake_serve)
+    sys.argv = ["upload.py", "app", "--port", "8123"]
+    assert upload.main() == 0
     assert called == {"port": 8123, "browser": True}

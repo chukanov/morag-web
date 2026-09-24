@@ -241,7 +241,7 @@ function renderRecent(list) {
   }));
 }
 
-/** Нативное окно отдаёт сюда путь брошенного файла (tools/ingest_app.py). */
+/** Нативное окно отдаёт сюда путь брошенного файла (tools/upload_app.py). */
 window.dropVideo = (path) => {
   const known = videos.find((v) => v.path === path);
   pick(known || {path, name: path.split("/").pop(), size: 0, mtime: Date.now() / 1000});

@@ -6,7 +6,7 @@
 // числа: сколько ждать и сколько места нужно.
 //
 // ⚠️ Оба пути ведут в ОДИН установщик — сервер подставляет в него свой адрес и пропуск
-// (`app/api/ingest.py`, `app/content/dist.py`). Строка живёт неделю; страница это говорит,
+// (`app/api/upload.py`, `app/content/dist.py`). Строка живёт неделю; страница это говорит,
 // потому что просроченную ссылку человек иначе понесёт в поддержку.
 //
 // Раздачи может не быть вовсе (публичная платформа, разработка): тогда страница честно говорит,
@@ -43,9 +43,9 @@ function composition(files = []) {
 }
 
 
-export async function renderIngest() {
-  document.body.setAttribute("data-view", "ingest");
-  const mount = $("#ingest-body");
+export async function renderUpload() {
+  document.body.setAttribute("data-view", "upload");
+  const mount = $("#upload-body");
   if (!mount) return;
   mount.replaceChildren(el("p", { class: "ing-note", text: "Смотрю, что готово…" }));
 
@@ -64,7 +64,7 @@ export async function renderIngest() {
         : "Не получилось спросить сервер о раздаче — попробуйте обновить страницу." }),
       el("p", { class: "ing-note" },
         "Всё то же самое умеет командная строка: ",
-        el("code", { text: "python3 tools/ingest.py ui" }),
+        el("code", { text: "python3 tools/upload.py ui" }),
         " из чекаута платформы."),
     );
     return;

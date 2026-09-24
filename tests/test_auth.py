@@ -105,7 +105,7 @@ def test_без_секции_auth_всё_как_прежде():
         assert app.state.auth.enabled is False
         assert c.get("/").status_code == 200
         me = c.get("/api/auth/me").json()
-        assert me["login"] is None and me["can"] == {"edit": False, "voices": False, "claim": False, "ingest": False}
+        assert me["login"] is None and me["can"] == {"edit": False, "voices": False, "claim": False, "upload": False}
         state = c.get("/api/auth/state").json()
         assert state["enabled"] is False and state["providers"] == []
         # «Дом» — пространство, не корень: на общем с чужим сайтом домене корень чужой.
@@ -154,7 +154,7 @@ def test_вход_ставит_cookie_и_даёт_личность(authed):
     assert r.status_code == 200, r.text
     me = r.json()
     assert me["login"] == "kuznetsova" and me["role"] == "admin" and me["provider"] == "local"
-    assert me["can"] == {"edit": True, "voices": True, "claim": True, "ingest": False}
+    assert me["can"] == {"edit": True, "voices": True, "claim": True, "upload": False}
     cookie = r.headers["set-cookie"]
     assert "HttpOnly" in cookie and "SameSite=lax" in cookie and "Path=/" in cookie
     assert "Secure" not in cookie, "локально http — с Secure браузер cookie не примет"
@@ -399,7 +399,7 @@ def test_роли_из_конфига_и_права_в_ручках(authed):
 
     login(c, "kovalev")                      # editor по умолчанию
     me = c.get("/api/auth/me").json()
-    assert me["role"] == "editor" and me["can"] == {"edit": True, "voices": False, "claim": True, "ingest": False}
+    assert me["role"] == "editor" and me["can"] == {"edit": True, "voices": False, "claim": True, "upload": False}
     r = c.post("/api/voices/Speaker_1", json={"name": "Кто-то"})
     assert r.status_code == 403 and "роль admin" in r.json()["detail"]
     assert c.post("/api/fixes", json={"was": "а", "now": "б"}).status_code == 403

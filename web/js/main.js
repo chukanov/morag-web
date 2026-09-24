@@ -4,7 +4,7 @@ import { initTheme, applyThemeTokens } from "./ui/theme.js";
 import { getSite, getCorpora, useCorpus, getRecords, getMe } from "./api.js";
 import { useSession, can, SIGNIN } from "./session.js";
 import { renderSignin } from "./signin.js";
-import { renderIngest } from "./ingest.js";
+import { renderUpload } from "./upload.js";
 import { mountUserMenu } from "./ui/user.js";
 import { createRouter, slugFromPath } from "./router.js";
 import { renderHub } from "./hub.js";
@@ -99,7 +99,7 @@ const router = createRouter(
     voices: (id) => renderVoices(id).catch(fail),
     signin: () => renderSignin().catch(fail),
     // Страница раздачи приложения: сюда ведёт пункт меню у тех, кому можно грузить записи.
-    ingest: () => renderIngest().catch(fail),
+    upload: () => renderUpload().catch(fail),
     // Календарь выступлений: год — в адресе, чтобы им можно было поделиться.
     calendar: (year) =>
       renderCalendar(year, {

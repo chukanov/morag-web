@@ -1,4 +1,4 @@
-"""Клиент загрузки (`tools/ingest.py`) против фейкового адаптера и фейкового сайта.
+"""Клиент загрузки (`tools/upload.py`) против фейкового адаптера и фейкового сайта.
 
 Что закреплено: протокол адаптера (multipart + поллинг), пакет и порядок загрузки (видео —
 последним), возобновление (повторный запуск не гонит транскрибацию заново и не льёт уже
@@ -18,7 +18,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "tests"))
 
-import ingest  # noqa: E402
+import upload  # noqa: E402
 from test_turn_edits import whole_artifact  # noqa: E402
 
 
@@ -52,17 +52,17 @@ class Fake:
             return httpx.Response(200, json={"enabled": True})
         if p == "/api/auth/login":
             return httpx.Response(200, json={"name": "Мария", "role": "editor"}, headers={"set-cookie": "morag_session=abc; Path=/"})
-        if p == "/api/ingest" and request.method == "POST":
+        if p == "/api/upload" and request.method == "POST":
             self.manifests.append(json.loads(request.read()))
             assert request.headers.get("cookie", "").startswith("morag_session=")
             return httpx.Response(200, json={"id": "2026-03-12-kafka-bez-boli", "video": "video.mp4"})
-        if p.startswith("/api/ingest/2026-03-12-kafka-bez-boli/files/") and request.method == "PUT":
+        if p.startswith("/api/upload/2026-03-12-kafka-bez-boli/files/") and request.method == "PUT":
             self.uploads.append((p.rsplit("/", 1)[-1], len(request.read())))
             return httpx.Response(200, json={"bytes": self.uploads[-1][1]})
         if p.endswith("/finish"):
             self.finishes += 1
             return httpx.Response(200, json={"state": "queued"})
-        if p == "/api/ingest/2026-03-12-kafka-bez-boli":
+        if p == "/api/upload/2026-03-12-kafka-bez-boli":
             self.status_calls += 1
             state = "building" if self.status_calls < 2 else "done"
             return httpx.Response(200, json={"state": state, "url": "/demo/rec/2026-03-12-kafka-bez-boli"})
@@ -72,40 +72,40 @@ class Fake:
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     fake = Fake()
-    monkeypatch.setattr(ingest, "TRANSPORT", httpx.MockTransport(fake.handle))
-    monkeypatch.setattr(ingest, "HOME", tmp_path / "work")
-    monkeypatch.setattr(ingest, "SESSION", tmp_path / "session.json")
-    monkeypatch.setattr(ingest, "POLL_SEC", 0)
-    monkeypatch.setattr(ingest.time, "sleep", lambda *_: None)
-    monkeypatch.setattr(ingest, "ffmpeg_audio", lambda video, out: out.write_bytes(b"mp3" * 100))
+    monkeypatch.setattr(upload, "TRANSPORT", httpx.MockTransport(fake.handle))
+    monkeypatch.setattr(upload, "HOME", tmp_path / "work")
+    monkeypatch.setattr(upload, "SESSION", tmp_path / "session.json")
+    monkeypatch.setattr(upload, "POLL_SEC", 0)
+    monkeypatch.setattr(upload.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(upload, "ffmpeg_audio", lambda video, out: out.write_bytes(b"mp3" * 100))
     video = tmp_path / "talk.mp4"
     video.write_bytes(b"\x00" * 3000)
     return fake, video, tmp_path
 
 
 def run(video: Path, *extra: str) -> int:
-    sys.argv = ["ingest.py", "run", str(video), "--title", "Kafka без боли", "--date", "2026-03-12",
+    sys.argv = ["upload.py", "run", str(video), "--title", "Kafka без боли", "--date", "2026-03-12",
                 "--speakers", "Мария Кузнецова", "--no-screen", *extra]
-    return ingest.main()
+    return upload.main()
 
 
 def test_login_stores_the_session_with_owner_only_rights(env, monkeypatch):
     fake, video, tmp = env
     monkeypatch.setattr("builtins.input", lambda *_: "kuznetsova")
-    monkeypatch.setattr(ingest.getpass, "getpass", lambda *_: "pw")
-    sys.argv = ["ingest.py", "login", "--site", "https://site.example.org/"]
-    assert ingest.main() == 0
-    data = json.loads(ingest.SESSION.read_text())
+    monkeypatch.setattr(upload.getpass, "getpass", lambda *_: "pw")
+    sys.argv = ["upload.py", "login", "--site", "https://site.example.org/"]
+    assert upload.main() == 0
+    data = json.loads(upload.SESSION.read_text())
     assert data["site"] == "https://site.example.org" and data["cookies"]["morag_session"] == "abc"
-    assert oct(ingest.SESSION.stat().st_mode & 0o777) == "0o600"
+    assert oct(upload.SESSION.stat().st_mode & 0o777) == "0o600"
 
 
 def test_run_transcribes_uploads_in_order_and_waits(env, monkeypatch):
     fake, video, tmp = env
-    ingest.save_session("https://site.example.org", {"morag_session": "abc"})
+    upload.save_session("https://site.example.org", {"morag_session": "abc"})
     assert run(video) == 0
     assert fake.transcriptions == 1 and fake.polls >= 2
-    work = ingest.HOME / "2026-03-12-kafka-bez-boli"
+    work = upload.HOME / "2026-03-12-kafka-bez-boli"
     assert (work / "artifact.json").is_file() and (work / "transcript.md").is_file()
     assert not (work / "audio.mp3").exists(), "звук после расшифровки не нужен — удалён"
     assert fake.manifests[0]["speakers"] == ["Мария Кузнецова"] and fake.manifests[0]["video"] == "video.mp4"
@@ -116,7 +116,7 @@ def test_run_transcribes_uploads_in_order_and_waits(env, monkeypatch):
 
 def test_second_run_resumes_without_redoing(env):
     fake, video, tmp = env
-    ingest.save_session("https://site.example.org", {"morag_session": "abc"})
+    upload.save_session("https://site.example.org", {"morag_session": "abc"})
     assert run(video) == 0
     assert run(video) == 0
     assert fake.transcriptions == 1, "артефакт уже есть — адаптер не трогаем"
@@ -127,14 +127,14 @@ def test_second_run_resumes_without_redoing(env):
 
 def test_refusals_are_messages_not_tracebacks(env, capsys):
     fake, video, tmp = env
-    ingest.save_session("https://site.example.org", {"morag_session": "abc"})
-    sys.argv = ["ingest.py", "run", str(tmp / "нет.mp4"), "--title", "x", "--date", "2026-03-12"]
-    assert ingest.main() == 1 and "нет файла" in capsys.readouterr().out
-    sys.argv = ["ingest.py", "run", str(video), "--title", "Норм", "--date", "12.03.2026"]
-    assert ingest.main() == 1 and "ГГГГ-ММ-ДД" in capsys.readouterr().out
-    ingest.SESSION.unlink()
-    sys.argv = ["ingest.py", "run", str(video), "--title", "Норм", "--date", "2026-03-12", "--no-screen"]
-    assert ingest.main() == 1 and "login" in capsys.readouterr().out
+    upload.save_session("https://site.example.org", {"morag_session": "abc"})
+    sys.argv = ["upload.py", "run", str(tmp / "нет.mp4"), "--title", "x", "--date", "2026-03-12"]
+    assert upload.main() == 1 and "нет файла" in capsys.readouterr().out
+    sys.argv = ["upload.py", "run", str(video), "--title", "Норм", "--date", "12.03.2026"]
+    assert upload.main() == 1 and "ГГГГ-ММ-ДД" in capsys.readouterr().out
+    upload.SESSION.unlink()
+    sys.argv = ["upload.py", "run", str(video), "--title", "Норм", "--date", "2026-03-12", "--no-screen"]
+    assert upload.main() == 1 and "login" in capsys.readouterr().out
 
 
 # --- стек: уборка не врёт, а ошибка называет причину ------------------------------------
@@ -147,11 +147,11 @@ def test_shutting_the_stack_down_never_masks_the_real_error(tmp_path, monkeypatc
     script.parent.mkdir(parents=True)
     script.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
     script.chmod(0o755)
-    monkeypatch.setattr(ingest, "MORAG_REPO", tmp_path / "morag")
+    monkeypatch.setattr(upload, "MORAG_REPO", tmp_path / "morag")
 
     with pytest.raises(Exception):
-        ingest.stack("up")                      # обычный вызов по-прежнему кричит
-    ingest.stack("down", check=False)           # а уборка молчит и не роняет
+        upload.stack("up")                      # обычный вызов по-прежнему кричит
+    upload.stack("down", check=False)           # а уборка молчит и не роняет
 
 
 def test_a_dead_stack_says_why_and_not_just_that(tmp_path, monkeypatch):
@@ -164,7 +164,7 @@ def test_a_dead_stack_says_why_and_not_just_that(tmp_path, monkeypatch):
         "openai.OpenAIError: Missing credentials. Please pass an `api_key`\n", encoding="utf-8")
     (logs / "whisper.log").write_text("INFO:     Application startup complete.\n", encoding="utf-8")
     monkeypatch.setenv("ASR_STACK_HOME", str(tmp_path))
-    why = ingest.stack_trouble()
+    why = upload.stack_trouble()
     assert "adaptor" in why and "Missing credentials" in why
     assert "whisper" not in why, "у здорового бэкенда жаловаться не на что"
 
@@ -180,19 +180,19 @@ def test_gateway_is_configured_before_work_not_only_at_login(tmp_path, monkeypat
 
     def fake_use_site_llm():
         called.append("да")
-        ingest.set_stack_env(OR_KEY="сессия-сайта")
+        upload.set_stack_env(OR_KEY="сессия-сайта")
         return {"via_site": True, "checked": True}
 
-    monkeypatch.setattr(ingest, "use_site_llm", fake_use_site_llm)
-    ingest.ensure_gateway()
-    assert called == ["да"] and ingest.stack_env_value("OR_KEY") == "сессия-сайта"
+    monkeypatch.setattr(upload, "use_site_llm", fake_use_site_llm)
+    upload.ensure_gateway()
+    assert called == ["да"] and upload.stack_env_value("OR_KEY") == "сессия-сайта"
 
     called.clear()
-    ingest.ensure_gateway()
+    upload.ensure_gateway()
     assert called == [], "уже настроено — второй раз к сайту не ходим"
 
-    monkeypatch.setattr(ingest, "use_site_llm", lambda: {"via_site": False})
+    monkeypatch.setattr(upload, "use_site_llm", lambda: {"via_site": False})
     monkeypatch.setenv("ASR_STACK_ENV", str(tmp_path / "пусто.env"))
     monkeypatch.delenv("OR_KEY", raising=False)
-    with pytest.raises(ingest.Step, match="шлюз"):
-        ingest.ensure_gateway()
+    with pytest.raises(upload.Step, match="шлюз"):
+        upload.ensure_gateway()

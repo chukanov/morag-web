@@ -41,8 +41,8 @@ export function mountUserMenu(me) {
   // Своя запись — только тем, кому можно грузить: у остальных пункт был бы дорогой в никуда
   // (страница спросила бы у сервера зеркало и получила 403). `data-go` ведёт роутером, без
   // перезагрузки, как кнопка календаря.
-  const upload = me.can?.ingest
-    ? el("button", { class: "d-item", type: "button", text: "Загрузить свою запись", "data-go": "ingest" })
+  const upload = me.can?.upload
+    ? el("button", { class: "d-item", type: "button", text: "Загрузить свою запись", "data-go": "upload" })
     : null;
   // ⚠️ Нативный replaceChildren null не пропускает — рисует текст «null».
   menu.replaceChildren(

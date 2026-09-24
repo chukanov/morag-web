@@ -17,7 +17,7 @@
 
 ⚠️ Форму запроса приходится оставить OpenAI-совместимой: её диктует адаптер морага, и менять
 чужой публичный движок ради этого дорого. Поэтому ручка живёт ПОД загрузкой записи
-(`/api/ingest/llm/…`, право `ingest`), а не как «LLM сайта»: это часть приёма записи.
+(`/api/upload/llm/…`, право `upload`), а не как «LLM сайта»: это часть приёма записи.
 
 Два рубежа, которые тут не про безопасность, а про то, чтобы сайт не замолчал и чтобы расход
 был виден:
@@ -39,10 +39,10 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 
-from ..content import ingest as core
+from ..content import upload as core
 from .voices import require
 
-router = APIRouter(prefix="/api/ingest/llm", tags=["ingest"])
+router = APIRouter(prefix="/api/upload/llm", tags=["upload"])
 log = logging.getLogger(__name__)
 
 MB = 1024 * 1024
@@ -63,16 +63,16 @@ def _who(request: Request):
         found = auth.session_user(token) if token else None
         if found is not None:
             request.state.session, request.state.user = found
-    require(request, "ingest")
+    require(request, "upload")
     user = auth.user_of(request)
     return user.login if user else "local"
 
 
 def _gateway(request: Request) -> tuple[str, str]:
-    """Адрес шлюза и ключ — те же, что у доразметки записи (`ingest.enrich`)."""
+    """Адрес шлюза и ключ — те же, что у доразметки записи (`upload.enrich`)."""
     cfg = request.app.state.cfg
-    if not (cfg.ingest.enabled and cfg.ingest.llm.enabled):
-        raise HTTPException(404, "шлюз LLM через сайт выключен (ingest.llm.enabled)")
+    if not (cfg.upload.enabled and cfg.upload.llm.enabled):
+        raise HTTPException(404, "шлюз LLM через сайт выключен (upload.llm.enabled)")
     env = core.llm_env_of(request.app.state)
     if not env:
         raise HTTPException(503, "на сервере не настроен LLM-шлюз (topic.base_url и ключ корпуса)")
@@ -84,7 +84,7 @@ def _slot(request: Request, login: str) -> asyncio.Semaphore:
     slots = getattr(request.app.state, "llm_slots", None)
     if slots is None:
         slots = request.app.state.llm_slots = {}
-    limit = max(1, request.app.state.cfg.ingest.llm.slots)
+    limit = max(1, request.app.state.cfg.upload.llm.slots)
     if login not in slots:
         slots[login] = asyncio.Semaphore(limit)
     return slots[login]
@@ -100,7 +100,7 @@ async def _forward(request: Request, path: str, method: str = "POST") -> Respons
     """
     login = _who(request)
     base, key = _gateway(request)
-    cfg = request.app.state.cfg.ingest.llm
+    cfg = request.app.state.cfg.upload.llm
     body = await request.body() if method == "POST" else b""
     if len(body) > cfg.max_mb * MB:
         raise HTTPException(413, f"запрос больше {cfg.max_mb:g} МБ")
@@ -132,7 +132,7 @@ async def _note(request: Request, login: str, path: str, status: int,
                 started: float, sent: int, got: int) -> None:
     """Строка в журнал: кто, куда, сколько. Иначе о лишнем расходе мы узнаем от шлюза."""
     await request.app.state.journal.write({
-        "kind": "ingest-llm", "user": login, "path": path, "status": status,
+        "kind": "upload-llm", "user": login, "path": path, "status": status,
         "ms": round((time.monotonic() - started) * 1000), "in": sent, "out": got})
 
 

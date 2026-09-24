@@ -1391,7 +1391,7 @@ body[data-view="chat"] .chat-tools{display:flex}
 #cal-years{margin:18px 0 4px}
 
 /* --- «Загрузить свою запись»: страница раздачи приложения --- */
-.ingest{max-width:62ch;display:flex;flex-direction:column;gap:12px}
+.upload{max-width:62ch;display:flex;flex-direction:column;gap:12px}
 .ing-lead{font-size:15.5px;line-height:1.55;color:var(--ink)}
 .ing-note{font-size:13.5px;line-height:1.55;color:var(--ink-dim)}
 .ing-warn{font-size:13.5px;color:var(--bad)}

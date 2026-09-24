@@ -224,7 +224,7 @@ def test_the_route_answers_over_http(tmp_path, monkeypatch):
     from app.main import app
 
     with TestClient(app) as c:
-        app.state.cfg.ingest.enabled = True
+        app.state.cfg.upload.enabled = True
         app.state.cfg.editing.local_only = False
         assert c.get("/api/voices/registry").status_code == 404, "реестр не настроен — так и говорим"
 

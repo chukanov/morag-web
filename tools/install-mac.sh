@@ -1,11 +1,11 @@
 #!/bin/sh
 # Поставить «Загрузить запись» на Mac — БЕЗ администратора, Homebrew и учёток на стороне.
 #
-#   curl -fsSL https://<сайт>/api/ingest/get/<пропуск>/install | sh
+#   curl -fsSL https://<сайт>/api/upload/get/<пропуск>/install | sh
 #
-# Всё приезжает с сайта (зеркало `ingest.dist_dir`): портативный питон, статический ffmpeg,
+# Всё приезжает с сайта (зеркало `upload.dist_dir`): портативный питон, статический ffmpeg,
 # снимок инструментов, движок транскрибации и модели — включая ту, что обычно требует токена
-# Hugging Face и нажатия «Agree». Ставится в ОДИН каталог `~/morag-ingest`; удалить установку =
+# Hugging Face и нажатия «Agree». Ставится в ОДИН каталог `~/morag-upload`; удалить установку =
 # удалить его (плюс приложение в ~/Applications). Повторный запуск досыпает недостающее:
 # докачивает оборванное, пропускает готовое.
 #
@@ -14,7 +14,7 @@
 # системы не будет. Ad-hoc-подпись (`codesign -s -`) нужна не для этого: без неё macOS считает
 # приложение новым после каждого обновления и заново спрашивает доступ к папкам.
 #
-# Переменные: MORAG_INGEST_HOME — куда ставить, MORAG_SITE и MORAG_PASS — сайт и пропуск
+# Переменные: MORAG_UPLOAD_HOME — куда ставить, MORAG_SITE и MORAG_PASS — сайт и пропуск
 # (подставляются сервером при выдаче), MORAG_NO_APP=1 — не собирать приложение,
 # MORAG_NO_OPEN=1 — собрать, но не запускать (так проверяют установку).
 set -eu
@@ -22,8 +22,8 @@ set -eu
 SITE="${MORAG_SITE:-@SITE@}"
 PASS="${MORAG_PASS:-@TOKEN@}"
 BUILT="@BUILT@"
-ROOT="${MORAG_INGEST_HOME:-$HOME/morag-ingest}"
-API="$SITE/api/ingest/get/$PASS"
+ROOT="${MORAG_UPLOAD_HOME:-$HOME/morag-upload}"
+API="$SITE/api/upload/get/$PASS"
 DIST="$ROOT/dist"
 STACK="$ROOT/asr-stack"
 ENV_FILE="$ROOT/env"
@@ -38,6 +38,16 @@ ok()   { printf '\033[32m  ✓ %s\033[0m\n' "$*"; }
 warn() { printf '\033[33m  ! %s\033[0m\n' "$*"; }
 die()  { printf '\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 step() { printf '\n\033[1m[%s/%s] %s\033[0m\n' "$1" "$STEPS" "$2"; }
+
+# ⚠️ Установка звалась `ingest`, стала `upload` (слово для человека, а не для машины). Старый
+# каталог ПЕРЕНОСИМ, а не оставляем: в нём 2.8 ГБ моделей, и «просто поставить заново» означало
+# бы выкачать их второй раз. Переносим и снимок сессии — иначе приложение забудет, что вошло.
+if [ ! -d "$ROOT" ] && [ -d "$HOME/morag-ingest" ]; then
+  mv "$HOME/morag-ingest" "$ROOT" && printf '\033[32m  ✓ старая установка перенесена: ~/morag-ingest → %s\033[0m\n' "$ROOT"
+fi
+if [ ! -d "$HOME/.morag-upload" ] && [ -d "$HOME/.morag-ingest" ]; then
+  mv "$HOME/.morag-ingest" "$HOME/.morag-upload"
+fi
 
 # --- 1. годится ли машина ----------------------------------------------------------------
 step 1 "проверяю машину"
@@ -209,21 +219,21 @@ fi
 
 # --- 6. команда и приложение -------------------------------------------------------------
 step 6 "приложение"
-cat > "$ROOT/bin/morag-ingest" <<EOF
+cat > "$ROOT/bin/morag-upload" <<EOF
 #!/bin/sh
-# То же самое из терминала: morag-ingest ui | app | run видео.mp4 …
+# То же самое из терминала: morag-upload ui | app | run видео.mp4 …
 export ASR_STACK_ENV="$ENV_FILE" MORAG_REPO="$ROOT/morag" ASR_STACK_HOME="$STACK" MORAG_SITE="$SITE"
 export SSL_CERT_FILE="$CA" REQUESTS_CA_BUNDLE="$CA"
 export PATH="$ROOT/bin:\$PATH"
-exec "$VIDEO/bin/python" "$ROOT/web/tools/ingest.py" "\$@"
+exec "$VIDEO/bin/python" "$ROOT/web/tools/upload.py" "\$@"
 EOF
-chmod 755 "$ROOT/bin/morag-ingest"
+chmod 755 "$ROOT/bin/morag-upload"
 
 if [ -z "${MORAG_NO_APP:-}" ]; then
   mkdir -p "$APPS" "$APP/Contents/MacOS" "$APP/Contents/Resources"
   cat > "$APP/Contents/MacOS/launcher" <<EOF
 #!/bin/sh
-exec "$ROOT/bin/morag-ingest" app
+exec "$ROOT/bin/morag-upload" app
 EOF
   chmod 755 "$APP/Contents/MacOS/launcher"
   printf 'APPL????' > "$APP/Contents/PkgInfo"
@@ -233,7 +243,7 @@ EOF
 <plist version="1.0"><dict>
   <key>CFBundleName</key><string>Загрузить запись</string>
   <key>CFBundleDisplayName</key><string>Загрузить запись</string>
-  <key>CFBundleIdentifier</key><string>org.morag.ingest</string>
+  <key>CFBundleIdentifier</key><string>org.morag.upload</string>
   <key>CFBundleExecutable</key><string>launcher</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
@@ -279,7 +289,7 @@ cat <<EOF
   Первый запуск: войдите на сайт своей учётной записью — больше ничего настраивать не надо,
   ключи и адреса приложение пропишет само. Дальше: перетащите видео в окно — и всё.
 
-  То же из терминала:  $ROOT/bin/morag-ingest ui
+  То же из терминала:  $ROOT/bin/morag-upload ui
   Удалить установку:   rm -rf "$ROOT" "$APP"
 EOF
 if [ -z "${MORAG_NO_APP:-}${MORAG_NO_OPEN:-}" ]; then open "$APP" 2>/dev/null || true; fi

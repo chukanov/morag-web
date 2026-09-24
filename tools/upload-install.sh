@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Поставить на Mac (Apple Silicon) всё, чтобы транскрибировать свою запись и загрузить её на сайт
-# (`tools/ingest.py`). Идемпотентен: повторный запуск досыпает недостающее.
+# (`tools/upload.py`). Идемпотентен: повторный запуск досыпает недостающее.
 #
-#   ./tools/ingest-install.sh                 # всё: brew-зависимости, чекаут morag, стек, модели, video-venv
-#   ./tools/ingest-install.sh --check         # ничего не менять, только сказать, чего не хватает
-#   ./tools/ingest-install.sh --no-models     # без скачивания моделей (несколько ГБ) — сделать позже
+#   ./tools/upload-install.sh                 # всё: brew-зависимости, чекаут morag, стек, модели, video-venv
+#   ./tools/upload-install.sh --check         # ничего не менять, только сказать, чего не хватает
+#   ./tools/upload-install.sh --no-models     # без скачивания моделей (несколько ГБ) — сделать позже
 #
 # Что появится: чекаут движка `morag` рядом с этим репозиторием (стек транскрибации живёт там),
 # `~/asr-stack` (venv-ы, модели, состояние), `~/.asr-stack.env` (адрес и ключ LLM, HF-токен;
-# 0600 — это ваши секреты), `~/asr-stack/video-venv` (инструменты экрана и сам ingest.py),
-# `~/asr-stack/bin/morag-ingest` — короткая команда.
+# 0600 — это ваши секреты), `~/asr-stack/video-venv` (инструменты экрана и сам upload.py),
+# `~/asr-stack/bin/morag-upload` — короткая команда.
 #
 # Модели: whisper и CAM++ — публичные, pyannote — с huggingface под вашим токеном (HF_TOKEN в
 # env-файле) после принятия условий модели на её странице. Зеркало моделей вместо HF — позже.
@@ -86,33 +86,33 @@ if [[ $MODELS -eq 1 ]]; then
   [[ $CHECK -eq 1 ]] || ASR_STACK_ENV="$ENV_FILE" "$MAC/fetch-models.sh"
 fi
 
-say "video-venv — инструменты экрана и ingest.py"
+say "video-venv — инструменты экрана и upload.py"
 VENV="$STACK_HOME/video-venv"
 if [[ -x "$VENV/bin/python" ]]; then ok "есть"; elif [[ $CHECK -eq 0 ]]; then
   "$PY" -m venv "$VENV"; "$VENV/bin/pip" install -q -r "$HERE/requirements-video.txt"
 fi
 
-say "команда morag-ingest и ярлык для Finder"
+say "команда morag-upload и ярлык для Finder"
 if [[ $CHECK -eq 0 ]]; then
   mkdir -p "$STACK_HOME/bin"
-  cat > "$STACK_HOME/bin/morag-ingest" <<EOF
+  cat > "$STACK_HOME/bin/morag-upload" <<EOF
 #!/bin/sh
 export ASR_STACK_ENV="$ENV_FILE" MORAG_REPO="$MORAG_REPO"
-exec "$VENV/bin/python" "$HERE/ingest.py" "\$@"
+exec "$VENV/bin/python" "$HERE/upload.py" "\$@"
 EOF
-  chmod +x "$STACK_HOME/bin/morag-ingest"
+  chmod +x "$STACK_HOME/bin/morag-upload"
   # Ярлык, который открывается двойным щелчком: страница вместо командной строки. `.command` —
   # родной для macOS способ «файл, запускающий программу»: Finder отдаёт его Терминалу, тот
   # поднимает локальный сервер и открывает браузер.
   mkdir -p "$HOME/Applications"
   cat > "$HOME/Applications/Загрузить запись.command" <<EOF
 #!/bin/sh
-exec "$STACK_HOME/bin/morag-ingest" ui
+exec "$STACK_HOME/bin/morag-upload" ui
 EOF
   chmod +x "$HOME/Applications/Загрузить запись.command"
 fi
 ok "~/Applications/Загрузить запись.command — двойной щелчок открывает страницу"
-ok "$STACK_HOME/bin/morag-ingest — то же из терминала (добавьте $STACK_HOME/bin в PATH)"
+ok "$STACK_HOME/bin/morag-upload — то же из терминала (добавьте $STACK_HOME/bin в PATH)"
 echo
 echo "дальше:  двойной щелчок по «Загрузить запись» в ~/Applications — и заполнить форму"
-echo "         (из терминала то же: morag-ingest ui; совсем без страницы — morag-ingest run …)"
+echo "         (из терминала то же: morag-upload ui; совсем без страницы — morag-upload run …)"

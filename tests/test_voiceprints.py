@@ -16,7 +16,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 
-import ingest  # noqa: E402
+import upload  # noqa: E402
 import voiceprints  # noqa: E402
 
 
@@ -61,10 +61,10 @@ def test_the_step_never_costs_the_upload(tmp_path, monkeypatch):
     work = tmp_path
     (work / "audio.mp3").write_bytes(b"mp3")
     said: list[str] = []
-    monkeypatch.setattr(ingest, "say", lambda text: said.append(text))
+    monkeypatch.setattr(upload, "say", lambda text: said.append(text))
     monkeypatch.setattr(voiceprints, "fingerprints",
                         lambda *a, **kw: (_ for _ in ()).throw(OSError("CAM++ не отвечает")))
-    assert ingest.voiceprint(work, artifact(tmp_path)) is None
+    assert upload.voiceprint(work, artifact(tmp_path)) is None
     assert not (work / "voices.json").exists()
     assert any("безымянными" in line for line in said), "человеку сказали, что случилось"
 
@@ -72,10 +72,10 @@ def test_the_step_never_costs_the_upload(tmp_path, monkeypatch):
 def test_the_step_is_resumable(tmp_path, monkeypatch):
     (tmp_path / "audio.mp3").write_bytes(b"mp3")
     (tmp_path / "voices.json").write_text('{"Speaker_3": {}}', encoding="utf-8")
-    monkeypatch.setattr(ingest, "say", lambda text: None)
+    monkeypatch.setattr(upload, "say", lambda text: None)
     monkeypatch.setattr(voiceprints, "fingerprints",
                         lambda *a, **kw: (_ for _ in ()).throw(AssertionError("не должно считаться заново")))
-    assert ingest.voiceprint(tmp_path, artifact(tmp_path)) == tmp_path / "voices.json"
+    assert upload.voiceprint(tmp_path, artifact(tmp_path)) == tmp_path / "voices.json"
 
 
 # --- перенумерация уже собранной записи (`tools/voices_assign.py`) ----------------------

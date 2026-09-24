@@ -34,7 +34,7 @@ SIGNIN = "/signin"
 # `leak_check --web`); `/api/health` — liveness для доставки и мониторинга (одни счётчики);
 # `/sw.js` — service worker: скрипт, пришедший редиректом, браузер отвергает.
 PUBLIC_EXACT = frozenset({SIGNIN, "/api/auth/state", "/api/auth/login", "/api/health", "/favicon.svg", "/sw.js"})
-# ⚠️ Два пути под `/api/ingest/` открыты ЗДЕСЬ намеренно — у обоих свой рубеж в самой ручке,
+# ⚠️ Два пути под `/api/upload/` открыты ЗДЕСЬ намеренно — у обоих свой рубеж в самой ручке,
 # потому что клиент у них не браузер и cookie он не носит:
 #   `get/`  — раздача установщика и зеркала: забирает `curl` из терминала, рубеж — подписанный
 #             пропуск в адресе (`app/content/dist.py`);
@@ -43,7 +43,7 @@ PUBLIC_EXACT = frozenset({SIGNIN, "/api/auth/state", "/api/auth/login", "/api/he
 #             (`app/api/llm.py` разбирает её и зовёт общий гейт `require`).
 # ⓘ Пускать сессию заголовком ВЕЗДЕ было бы проще, но это тихо расширило бы каждую ручку API;
 # здесь же расширены ровно две, и у обеих это записано.
-PUBLIC_PREFIX = ("/js/", "/css/", "/assets/", "/api/ingest/get/", "/api/ingest/llm/")
+PUBLIC_PREFIX = ("/js/", "/css/", "/assets/", "/api/upload/get/", "/api/upload/llm/")
 NO_STORE = {"Cache-Control": "no-store"}
 # Корень подписи на время процесса — когда вход выключен и постоянного ключа нет вовсе.
 _EPHEMERAL = secrets.token_bytes(32)
@@ -216,12 +216,12 @@ class AuthService:
         request.state.user = identity
         return identity
 
-    def capabilities(self, request: Request, editing_enabled: bool, ingest_enabled: bool = False) -> dict[str, bool]:
+    def capabilities(self, request: Request, editing_enabled: bool, upload_enabled: bool = False) -> dict[str, bool]:
         if not self.enabled:
             # Без авторизации права решает один флаг — как до неё (у загрузки — свой).
-            return {name: bool(ingest_enabled if name == "ingest" else editing_enabled) for name in roles.PERMISSIONS}
+            return {name: bool(upload_enabled if name == "upload" else editing_enabled) for name in roles.PERMISSIONS}
         user = self.user_of(request)
-        return roles.capabilities(user.role if user else None, editing_enabled, ingest_enabled)
+        return roles.capabilities(user.role if user else None, editing_enabled, upload_enabled)
 
     def why_line(self, request: Request, subject: str = "") -> str:
         """Подпись правки в словаре. Пусто — когда автора нет (авторизация выключена), и тогда

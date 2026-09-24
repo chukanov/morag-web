@@ -31,7 +31,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import ingest          # noqa: E402 — сессия сайта и его клиент
+import upload          # noqa: E402 — сессия сайта и его клиент
 import voiceprints     # noqa: E402
 
 SIDECAR = "record.json"
@@ -40,7 +40,7 @@ REFS = "record.refs.json"
 
 def remap(text: str, mapping: dict[str, str]) -> str:
     """Одним проходом со словарём: узнавание возвращает перестановки, а цепочка замен схлопнула
-    бы два голоса в один (тот же приём, что у приёма записи — `app/content/ingest.py`)."""
+    бы два голоса в один (тот же приём, что у приёма записи — `app/content/upload.py`)."""
     import re
 
     return re.sub(r"\bSpeaker_\d+\b", lambda m: mapping.get(m.group(0), m.group(0)), text)
@@ -132,7 +132,7 @@ def identify(site: str, cookies: dict, episode: str, prints: dict,
     """⚠️ `dry` уезжает НА СЕРВЕР, а не остаётся здесь: узнавание пишет в реестр (новый голос
     занимает номер), и «просто посмотреть» без этого флага забирает номера под запись, которую
     ещё не решили перенумеровывать."""
-    with ingest.client(site, cookies, timeout=120) as c:
+    with upload.client(site, cookies, timeout=120) as c:
         answer = c.post("/api/voices/identify",
                         json={"episode": episode, "voices": prints, "dry": dry})
     if answer.status_code != 200:
@@ -158,15 +158,15 @@ def main() -> int:
     if not Path(audio).is_file():
         raise SystemExit(f"нет звука {audio} — заберите его: python3 tools/fetch_audio.py --id {record.name}")
 
-    site, cookies = ingest.load_session(args.site or None)
+    site, cookies = upload.load_session(args.site or None)
     # ⚠️ Черновики — во ВРЕМЕННЫЙ каталог, не в каталог записи. Отпечатки режут из звука wav на
     # весь эфир: на 50-минутной записи это 95 МБ, и однажды оставленные в записи (ранний выход
     # «менять нечего») они уехали бы на сервер ближайшим rsync — звука в корпусе быть не должно,
     # а `.gitignore` от rsync не спасает. Пересчёт стоит пару секунд, кэшировать нечего.
     with tempfile.TemporaryDirectory(prefix="voices-") as work:
         prints = voiceprints.fingerprints(sidecar, Path(audio), work=Path(work),
-                                          url=ingest.stack_env_value("ASR_CAMPP_URL") or voiceprints.DEFAULT_URL,
-                                          key=ingest.stack_env_value("ASR_CAMPP_KEY"))
+                                          url=upload.stack_env_value("ASR_CAMPP_URL") or voiceprints.DEFAULT_URL,
+                                          key=upload.stack_env_value("ASR_CAMPP_KEY"))
     if not prints:
         raise SystemExit("в записи нет безымянных голосов с речью — узнавать нечего")
     print(f"отпечатков: {len(prints)} ({', '.join(prints)})")

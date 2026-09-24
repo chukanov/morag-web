@@ -36,7 +36,7 @@ def live(tmp_path, monkeypatch):
     cfg.write_text(
         "corpora:\n"
         f"  - dir: {demo}\n"
-        "ingest:\n  enabled: true\n"
+        "upload:\n  enabled: true\n"
         "topic:\n  base_url: https://llm.example.org/api\n  model: Instruct\n  api_key: corpus-key-xyz\n"
         "journal:\n  enabled: true\n  path: ./journal.jsonl\n"
         "auth:\n  enabled: true\n  secret: секрет-теста\n"
@@ -80,7 +80,7 @@ def token_of(c: TestClient) -> str:
 def test_the_session_string_works_as_the_gateway_credential(live):
     c, seen, _ = live
     token = token_of(c)
-    r = c.post("/api/ingest/llm/chat/completions", json=BODY, headers={"Authorization": f"Bearer {token}"})
+    r = c.post("/api/upload/llm/chat/completions", json=BODY, headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200 and r.json()["choices"][0]["message"]["content"] == "ответ шлюза"
     sent = seen[-1]
     assert str(sent.url) == "https://llm.example.org/api/chat/completions"
@@ -91,8 +91,8 @@ def test_the_session_string_works_as_the_gateway_credential(live):
 def test_options_tell_the_app_what_to_write_into_the_stack(live):
     c, _, _ = live
     c.post("/api/auth/login", json={"login": "kuznetsova", "password": "пароль"})
-    llm = c.get("/api/ingest/options").json()["llm"]
-    assert llm["via_site"] is True and llm["path"] == "/api/ingest/llm"
+    llm = c.get("/api/upload/options").json()["llm"]
+    assert llm["via_site"] is True and llm["path"] == "/api/upload/llm"
     assert llm["model"] == "Instruct" and "session" in llm["cookie"]
 
 
@@ -102,7 +102,7 @@ def test_without_a_session_nobody_gets_in(live):
     before = len(seen)
     for bad in ("", "not-a-session", token[:-2] + ("A" if token[-1] != "A" else "B")):
         head = {"Authorization": f"Bearer {bad}"} if bad else {}
-        assert c.post("/api/ingest/llm/chat/completions", json=BODY, headers=head).status_code == 401
+        assert c.post("/api/upload/llm/chat/completions", json=BODY, headers=head).status_code == 401
     assert len(seen) == before, "до шлюза чужой запрос не доходит вовсе"
 
 
@@ -112,41 +112,41 @@ def test_deleting_the_profile_revokes_it_at_once(live):
     c, _, tmp_path = live
     token = token_of(c)
     head = {"Authorization": f"Bearer {token}"}
-    assert c.post("/api/ingest/llm/chat/completions", json=BODY, headers=head).status_code == 200
+    assert c.post("/api/upload/llm/chat/completions", json=BODY, headers=head).status_code == 200
     for snapshot in (tmp_path / "authdata" / "users").rglob("*.json"):
         snapshot.unlink()
-    assert c.post("/api/ingest/llm/chat/completions", json=BODY, headers=head).status_code == 401
+    assert c.post("/api/upload/llm/chat/completions", json=BODY, headers=head).status_code == 401
 
 
 def test_a_viewer_is_not_allowed(live):
-    """Право то же, что у загрузки записи (`ingest` → editor): смотрящему шлюз не нужен."""
+    """Право то же, что у загрузки записи (`upload` → editor): смотрящему шлюз не нужен."""
     c, _, _ = live
     token = token_of(c)
     c.app.state.cfg.auth.users[0].role = "viewer"
-    r = c.post("/api/ingest/llm/chat/completions", json=BODY, headers={"Authorization": f"Bearer {token}"})
+    r = c.post("/api/upload/llm/chat/completions", json=BODY, headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 403
 
 
 def test_every_call_leaves_a_line_in_the_journal(live):
     c, _, tmp_path = live
     token = token_of(c)
-    c.post("/api/ingest/llm/chat/completions", json=BODY, headers={"Authorization": f"Bearer {token}"})
+    c.post("/api/upload/llm/chat/completions", json=BODY, headers={"Authorization": f"Bearer {token}"})
     lines = (tmp_path / "journal.jsonl").read_text(encoding="utf-8").strip().splitlines()
-    row = [__import__("json").loads(x) for x in lines if '"ingest-llm"' in x][-1]
+    row = [__import__("json").loads(x) for x in lines if '"upload-llm"' in x][-1]
     assert row["user"] == "kuznetsova" and row["status"] == 200 and row["path"] == "/chat/completions"
     assert row["in"] > 0 and "ms" in row
 
 
-def test_the_proxy_is_off_when_ingest_is_off(live):
+def test_the_proxy_is_off_when_upload_is_off(live):
     c, _, _ = live
     token = token_of(c)
     head = {"Authorization": f"Bearer {token}"}
-    c.app.state.cfg.ingest.llm.enabled = False
-    assert c.post("/api/ingest/llm/chat/completions", json=BODY, headers=head).status_code == 404
-    c.app.state.cfg.ingest.llm.enabled = True
-    c.app.state.cfg.ingest.enabled = False
-    assert c.post("/api/ingest/llm/chat/completions", json=BODY, headers=head).status_code == 404
-    c.app.state.cfg.ingest.enabled = True
+    c.app.state.cfg.upload.llm.enabled = False
+    assert c.post("/api/upload/llm/chat/completions", json=BODY, headers=head).status_code == 404
+    c.app.state.cfg.upload.llm.enabled = True
+    c.app.state.cfg.upload.enabled = False
+    assert c.post("/api/upload/llm/chat/completions", json=BODY, headers=head).status_code == 404
+    c.app.state.cfg.upload.enabled = True
 
 
 def test_a_huge_body_is_refused_before_the_gateway(live):
@@ -154,8 +154,8 @@ def test_a_huge_body_is_refused_before_the_gateway(live):
     тратить незачем."""
     c, seen, _ = live
     token = token_of(c)
-    c.app.state.cfg.ingest.llm.max_mb = 0.01
+    c.app.state.cfg.upload.llm.max_mb = 0.01
     before = len(seen)
-    r = c.post("/api/ingest/llm/chat/completions", json={"model": "Vision", "messages": ["x" * 20000]},
+    r = c.post("/api/upload/llm/chat/completions", json={"model": "Vision", "messages": ["x" * 20000]},
                headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 413 and len(seen) == before

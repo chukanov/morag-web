@@ -19,13 +19,13 @@ from fastapi.staticfiles import StaticFiles
 
 from . import logging as applog
 from . import meta as ogmeta
-from .api import ask, auth as auth_api, edits, ingest as ingest_api, llm as llm_api, site, voices
+from .api import ask, auth as auth_api, edits, upload as upload_api, llm as llm_api, site, voices
 from .auth import AuthService, gate as auth_gate
 from .chat.topic import TopicMaker
 from .config import APP_DIR, PRODUCT, _inside, engine_for, family_dir, load_config, load_corpora
 from .engine.client import EngineClient
 from .content.edits import Edits
-from .content.ingest import Staging
+from .content.upload import Staging
 from .content.rebuild import Rebuilder
 from .content.tokens import Tokens
 from .content.voices import Voices
@@ -67,9 +67,9 @@ async def lifespan(app: FastAPI):
     app.state.rebuilder = Rebuilder(cfg.editing.rebuild, APP_DIR.parent)
     app.state.rebuilder.start()
     # Загрузка записей с чужих машин: стейджинг — `<семья>/incoming`, если конфиг не сказал иначе;
-    # вне `records/`, поэтому индексатор недособранного не видит (app/content/ingest.py).
-    app.state.ingest = Staging(Path(cfg.ingest.dir) if cfg.ingest.dir else family / "incoming", family,
-                               base=cfg.ingest.speaker_base, step=cfg.ingest.speaker_step)
+    # вне `records/`, поэтому индексатор недособранного не видит (app/content/upload.py).
+    app.state.upload = Staging(Path(cfg.upload.dir) if cfg.upload.dir else family / "incoming", family,
+                               base=cfg.upload.speaker_base, step=cfg.upload.speaker_step)
     app.state.default_corpus = corpora.get(default_slug) if default_slug else None
     app.state.gate = ConcurrencyGate(cfg.limits.max_concurrent_streams)
     app.state.journal = Journal(journal_path, enabled=cfg.journal.enabled)
@@ -156,7 +156,7 @@ def create_app() -> FastAPI:
     app.include_router(ask.router)
     app.include_router(voices.router)
     app.include_router(edits.router)
-    app.include_router(ingest_api.router)
+    app.include_router(upload_api.router)
     # Шлюз LLM для расшифровки на чужом маке — под приёмом записи и его правом.
     app.include_router(llm_api.router)
     app.include_router(auth_api.router)

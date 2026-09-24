@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Окно приложения: страница загрузки внутри нативного окна, файл — перетаскиванием.
 
-    python3 tools/ingest.py app          # окно (или браузер, если нет PyObjC)
+    python3 tools/upload.py app          # окно (или браузер, если нет PyObjC)
 
 Зачем окно, если есть страница в браузере. Тому, кто выкладывает свой доклад раз в месяц, вкладка
 с локальным адресом и токеном в строке — лишний слой: её теряют среди других вкладок, случайно
@@ -9,7 +9,7 @@
 пришлось бы копировать через localhost). Окно решает ровно это: живёт отдельно, файл берётся с
 диска по-настоящему.
 
-Как устроено: локальный сервер (`ingest_ui`) поднимается в потоке, окно показывает его страницу
+Как устроено: локальный сервер (`upload_ui`) поднимается в потоке, окно показывает его страницу
 через `WKWebView`, а перетаскивание ловится НАТИВНО и путь отдаётся странице вызовом JS.
 
 ⚠️ Перетаскивание перехватывается у веб-вида, а не у окна: WebKit регистрируется на файловые
@@ -28,14 +28,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import ingest_ui  # noqa: E402
+import upload_ui  # noqa: E402
 
 TITLE = "Загрузить запись"
 WIDTH, HEIGHT = 980, 720
 
 
 def available() -> bool:
-    """Есть ли чем рисовать окно. Нет — зовущий откроет браузер (ingest.py::cmd_app)."""
+    """Есть ли чем рисовать окно. Нет — зовущий откроет браузер (upload.py::cmd_app)."""
     try:
         import Cocoa  # noqa: F401, PLC0415
         import WebKit  # noqa: F401, PLC0415
@@ -52,7 +52,7 @@ def run(port: int = 8099) -> int:
                        NSPasteboardTypeFileURL)
     from WebKit import WKWebView, WKWebViewConfiguration
 
-    server, url = ingest_ui.start_server(port)
+    server, url = upload_ui.start_server(port)
 
     class DropWebView(WKWebView):
         """Веб-вид, который сам принимает файлы: путь уходит в страницу, а не открывается в окне."""
@@ -88,7 +88,7 @@ def run(port: int = 8099) -> int:
                 if not raw:
                     continue
                 path = NSURL.URLWithString_(raw).path()
-                if path and Path(path).suffix.lower().lstrip(".") in ingest_ui.ingest.VIDEO_EXT:
+                if path and Path(path).suffix.lower().lstrip(".") in upload_ui.upload.VIDEO_EXT:
                     out.append(str(path))
             return out
 
@@ -96,7 +96,7 @@ def run(port: int = 8099) -> int:
         """Закрытие окна во время работы спрашивает подтверждение, иначе гасит приложение."""
 
         def windowShouldClose_(self, window):  # noqa: N802
-            if ingest_ui.STATE.get("stage") != "running":
+            if upload_ui.STATE.get("stage") != "running":
                 return True
             alert = NSAlert.alloc().init()
             alert.setMessageText_("Запись ещё обрабатывается")

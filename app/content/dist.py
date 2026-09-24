@@ -28,7 +28,7 @@ import time
 from pathlib import Path
 
 TTL = 7 * 24 * 3600          # неделя: скачивание долгое, а установку откладывают
-PURPOSE = "ingest-dist"      # назначение подписи (см. `derived_secret`)
+PURPOSE = "upload-dist"      # назначение подписи (см. `derived_secret`)
 MANIFEST = "manifest.json"
 # Имя файла зеркала: буквы, цифры и `.-_`, без путей и без ведущей точки.
 ALLOWED = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")

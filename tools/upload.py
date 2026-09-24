@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """Своя запись — на сайт: транскрибация и экран у себя на Mac, сборка и индексация на сервере.
 
-    python3 tools/ingest.py login --site https://site.example.org
-    python3 tools/ingest.py run talk.mp4 --title "Kafka без боли" --date 2026-03-12 \\
+    python3 tools/upload.py login --site https://site.example.org
+    python3 tools/upload.py run talk.mp4 --title "Kafka без боли" --date 2026-03-12 \\
         [--event "Доклады"] [--speakers "Мария Кузнецова"] [--tags kafka,streams] \\
         [--summary "О чём доклад"] [--slides deck.pdf] [--no-screen] [--stack] [--no-wait]
-    python3 tools/ingest.py status 2026-03-12-kafka-bez-boli
+    python3 tools/upload.py status 2026-03-12-kafka-bez-boli
 
 Что происходит (`run`), по шагам, каждый — с возобновлением: упало на третьем — второй раз
-начнётся с третьего (состояние — `~/morag-ingest/<id>/state.json`):
+начнётся с третьего (состояние — `~/morag-upload/<id>/state.json`):
 
   1. стек транскрибации у вас на машине (`morag/services/asr-adaptor/deploy/mac/stack.sh`,
-     ставится `tools/ingest-install.sh`): звук вынимает ffmpeg, адаптер гонит диаризацию,
+     ставится `tools/upload-install.sh`): звук вынимает ffmpeg, адаптер гонит диаризацию,
      whisper и LLM-стадии через ВАШ ключ (`~/.asr-stack.env`) → `artifact.json`;
   2. экран из видео (`--no-screen` пропускает): шкала слайдов, заставка, описания кадров
      Vision-моделью, обращения «вот здесь», аннотации — инструменты `tools/*.py` под
      `~/asr-stack/video-venv`; для них запись собирается ВО ВРЕМЕННОЙ семье с пустыми словарями
-     (`~/morag-ingest/family`) — на сайт эта сборка не едет, едет сырой артефакт;
-  3. пакет уезжает на сайт под вашей учёткой (`/api/ingest`): манифест, артефакт, сайдкары
+     (`~/morag-upload/family`) — на сайт эта сборка не едет, едет сырой артефакт;
+  3. пакет уезжает на сайт под вашей учёткой (`/api/upload`): манифест, артефакт, сайдкары
      экрана, кадры, слайды, видео (последним, с прогрессом); сервер собирает запись с
      настоящими словарями и раскладкой и отвечает адресом. Индексация — отдельно и планово:
      ждать её человеку незачем, запись читается на сайте сразу.
@@ -26,7 +26,7 @@
 сайте их называют потом — «Это я» у своего голоса, карточка голоса у остальных. Категория и
 темы — позже, обычной разметкой корпуса.
 
-Зависимости: python3.10+, ffmpeg, httpx (есть в `video-venv`). Стек — `ingest-install.sh`.
+Зависимости: python3.10+, ffmpeg, httpx (есть в `video-venv`). Стек — `upload-install.sh`.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ from pathlib import Path
 try:
     import httpx
 except ImportError:  # pragma: no cover — подсказка вместо трейсбека
-    sys.exit("нужен httpx: ~/asr-stack/video-venv/bin/python tools/ingest.py … (или pip install httpx)")
+    sys.exit("нужен httpx: ~/asr-stack/video-venv/bin/python tools/upload.py … (или pip install httpx)")
 
 # ⚠️ Сертификат корпоративного сайта подписан ВНУТРЕННИМ центром сертификации, а httpx носит с
 # собой только публичные корни: без этого вход отвечает `CERTIFICATE_VERIFY_FAILED`, и выглядит
@@ -64,8 +64,8 @@ REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 from make_record import slugify  # noqa: E402
 
-HOME = Path(os.environ.get("MORAG_INGEST_HOME") or (Path.home() / "morag-ingest"))
-SESSION = Path.home() / ".morag-ingest" / "session.json"
+HOME = Path(os.environ.get("MORAG_UPLOAD_HOME") or (Path.home() / "morag-upload"))
+SESSION = Path.home() / ".morag-upload" / "session.json"
 ASR_BASE = os.environ.get("ASR_BASE", "http://127.0.0.1:8082")
 STACK_HOME = Path(os.environ.get("ASR_STACK_HOME") or (Path.home() / "asr-stack"))
 STACK_ENV = Path(os.environ.get("ASR_STACK_ENV") or (Path.home() / ".asr-stack.env"))
@@ -80,7 +80,7 @@ class Step(Exception):
     """Шаг не прошёл: причина для человека, без трейсбека."""
 
 
-# Хвост сообщений — для страницы (`ingest_ui.py`): те же строки, что в терминале. Кольцо, а не
+# Хвост сообщений — для страницы (`upload_ui.py`): те же строки, что в терминале. Кольцо, а не
 # файл: страница показывает ход работы, а разбор потом — в терминале.
 LOG: list[str] = []
 
@@ -100,8 +100,8 @@ def say(msg: str) -> None:
 # --- файл стека ----------------------------------------------------------------------------
 
 # Путь ручки сайта, через которую стадии с LLM ходят в корпоративный шлюз (`app/api/llm.py`):
-# сервер называет его сам в `/api/ingest/options`, здесь — запасное значение.
-SITE_LLM_PATH = "/api/ingest/llm"
+# сервер называет его сам в `/api/upload/options`, здесь — запасное значение.
+SITE_LLM_PATH = "/api/upload/llm"
 
 def stack_env_path() -> Path:
     """Файл стека — ПО ЗОВУ, а не по импорту: окружение приложению задаёт запускатор, а тесты
@@ -162,7 +162,7 @@ def load_session(site: str | None) -> tuple[str, dict[str, str]]:
             return data["site"], data.get("cookies") or {}
     site = site or os.environ.get("MORAG_SITE") or ""
     if not site:
-        raise Step("не знаю адрес сайта: сначала `ingest.py login --site …`")
+        raise Step("не знаю адрес сайта: сначала `upload.py login --site …`")
     return site.rstrip("/"), {}
 
 
@@ -223,7 +223,7 @@ def use_site_llm() -> dict:
     """
     site, cookies = load_session(None)
     with client(site, cookies, timeout=20) as c:
-        r = c.get("/api/ingest/options")
+        r = c.get("/api/upload/options")
         if r.status_code != 200:
             raise Step(f"сайт не ответил про загрузку ({r.status_code}) — войдите заново")
         llm = (r.json() or {}).get("llm") or {}
@@ -273,7 +273,7 @@ def stack(command: str, *, check: bool = True) -> None:
     """
     script = MORAG_REPO / "services" / "asr-adaptor" / "deploy" / "mac" / "stack.sh"
     if not script.is_file():
-        raise Step(f"нет {script}: чекаут morag ожидается рядом (MORAG_REPO) — см. ingest-install.sh")
+        raise Step(f"нет {script}: чекаут morag ожидается рядом (MORAG_REPO) — см. upload-install.sh")
     env = {**os.environ, "ASR_STACK_ENV": str(STACK_ENV)}
     say(f"стек: {command}")
     done = subprocess.run([str(script), command], check=check, env=env)
@@ -497,9 +497,9 @@ def upload(work: Path, site: str, cookies: dict[str, str], manifest: dict, files
     with client(site, cookies, timeout=httpx.Timeout(600.0, connect=30.0)) as c:
         rid = state.get("server_id")
         if not rid:
-            r = c.post("/api/ingest", json=manifest)
+            r = c.post("/api/upload", json=manifest)
             if r.status_code == 401:
-                raise Step("сессия сайта протухла: `ingest.py login`")
+                raise Step("сессия сайта протухла: `upload.py login`")
             if r.status_code != 200:
                 raise Step(f"сайт отверг манифест ({r.status_code}): {r.json().get('detail', r.text)}")
             rid = r.json()["id"]
@@ -511,14 +511,14 @@ def upload(work: Path, site: str, cookies: dict[str, str], manifest: dict, files
                 continue
             say(f"загружаю {name} ({size_of(path.stat().st_size)})")
             body = Progress(path, name)
-            r = c.put(f"/api/ingest/{rid}/files/{name}", content=body,
+            r = c.put(f"/api/upload/{rid}/files/{name}", content=body,
                       headers={"Content-Length": str(body.total), "Content-Type": "application/octet-stream"})
             if r.status_code != 200:
                 raise Step(f"{name}: сайт ответил {r.status_code}: {r.text[:300]}")
             sent.add(name)
             state["sent"] = sorted(sent)
             state_path.write_text(json.dumps(state), encoding="utf-8")
-        r = c.post(f"/api/ingest/{rid}/finish")
+        r = c.post(f"/api/upload/{rid}/finish")
         if r.status_code != 200:
             raise Step(f"приём не запустился ({r.status_code}): {r.json().get('detail', r.text)}")
         say(f"пакет принят, сервер собирает запись {rid}")
@@ -527,7 +527,7 @@ def upload(work: Path, site: str, cookies: dict[str, str], manifest: dict, files
         seen = ""
         while True:
             time.sleep(5)
-            s = c.get(f"/api/ingest/{rid}").json()
+            s = c.get(f"/api/upload/{rid}").json()
             if s.get("state") != seen:
                 seen = s.get("state")
                 say(f"  сервер: {seen}")
@@ -569,7 +569,7 @@ def pipeline(video: Path, *, title: str, date: str, event: str = "", speakers: l
              site: str | None = None, with_stack: bool = False, with_screen: bool = True,
              wait: bool = True, title_auto: bool = False) -> str:
     """Весь путь записи: расшифровка → экран → пакет на сайт. Общий для командной строки и для
-    страницы (`ingest_ui.py`) — шаги, возобновление и сообщения обязаны быть одни и те же."""
+    страницы (`upload_ui.py`) — шаги, возобновление и сообщения обязаны быть одни и те же."""
     video = Path(video).expanduser().resolve()
     fields = check_fields(video, title, date, slides)
     rid, ext, slides_pdf = fields["id"], fields["ext"], fields["slides"]
@@ -622,24 +622,24 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 def cmd_ui(args: argparse.Namespace) -> int:
     """Страница вместо командной строки: поднять локальный сервер и открыть браузер."""
-    import ingest_ui
-    return ingest_ui.serve(port=args.port, open_browser=not args.no_open)
+    import upload_ui
+    return upload_ui.serve(port=args.port, open_browser=not args.no_open)
 
 
 def cmd_app(args: argparse.Namespace) -> int:
     """Окно приложения. Нет PyObjC (не мак, урезанный питон) — та же страница в браузере."""
-    import ingest_app
-    if not args.browser and ingest_app.available():
-        return ingest_app.run(port=args.port)
-    import ingest_ui
+    import upload_app
+    if not args.browser and upload_app.available():
+        return upload_app.run(port=args.port)
+    import upload_ui
     say("окна нет (нужен PyObjC) — открываю страницу в браузере")
-    return ingest_ui.serve(port=args.port, open_browser=True)
+    return upload_ui.serve(port=args.port, open_browser=True)
 
 
 def cmd_status(args: argparse.Namespace) -> int:
     site, cookies = load_session(args.site)
     with client(site, cookies) as c:
-        r = c.get(f"/api/ingest/{args.id}")
+        r = c.get(f"/api/upload/{args.id}")
     print(json.dumps(r.json(), ensure_ascii=False, indent=2))
     return 0 if r.status_code == 200 else 1
 
@@ -655,7 +655,7 @@ def main() -> int:
     p.add_argument("video")
     p.add_argument("--title", required=True)
     p.add_argument("--date", required=True, help="YYYY-MM-DD — дата выступления")
-    p.add_argument("--event", help="рубрика — из списка сайта (ingest.py options)")
+    p.add_argument("--event", help="рубрика — из списка сайта (upload.py options)")
     p.add_argument("--speakers", help="докладчики через запятую, «Имя Фамилия»")
     p.add_argument("--tags", help="метки через запятую")
     p.add_argument("--summary", help="аннотация: о чём запись")
@@ -694,7 +694,7 @@ def main() -> int:
 def cmd_options(args: argparse.Namespace) -> int:
     site, cookies = load_session(args.site)
     with client(site, cookies) as c:
-        r = c.get("/api/ingest/options")
+        r = c.get("/api/upload/options")
     print(json.dumps(r.json(), ensure_ascii=False, indent=2))
     return 0 if r.status_code == 200 else 1
 

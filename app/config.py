@@ -172,7 +172,7 @@ class VoicesCfg(BaseModel):
     max_centroids: int = 8
 
 
-class IngestLlmCfg(BaseModel):
+class UploadLlmCfg(BaseModel):
     """Шлюз LLM через сайт (`app/api/llm.py`): стадии расшифровки на чужом маке ходят в
     корпоративный шлюз ЧЕРЕЗ нас, удостоверяясь сессией сайта, — чтобы человеку не заводить и
     не вписывать свой ключ. Ключ берётся там же, где у доразметки (`topic` + ключ корпуса).
@@ -190,10 +190,10 @@ class IngestLlmCfg(BaseModel):
     max_mb: float = 8              # кадр в base64 — сотни килобайт; мегабайты означают ошибку
 
 
-class IngestCfg(BaseModel):
+class UploadCfg(BaseModel):
     """Приём записи, транскрибированной на чужой машине (19.09).
 
-    Пока нет сервера с моделями, докладчик транскрибирует запись на своём Mac (`tools/ingest.py`)
+    Пока нет сервера с моделями, докладчик транскрибирует запись на своём Mac (`tools/upload.py`)
     и загружает на сайт пакет: сырой артефакт адаптера, сайдкары экрана, видео и поля. Сервер
     доводит его до записи ТЕМ ЖЕ `make_record`, что пересобирает правки, — с настоящими
     словарями и раскладкой, — и запускает индексацию. Два обязательных условия:
@@ -206,7 +206,7 @@ class IngestCfg(BaseModel):
         по-прежнему безымянные голоса («Это я», карточка голоса работают), а коллизий нет.
 
     `enabled` по умолчанию FALSE — в примере конфига (он в git) приём выключен; включённый —
-    право `ingest` (`app/auth/roles.py`), без входа — только петлевой адрес, как у правки.
+    право `upload` (`app/auth/roles.py`), без входа — только петлевой адрес, как у правки.
     Команды — списки argv с подстановками, как `editing.rebuild`; `{record_dir}`, `{artifact}`,
     `{family}` подставляются. Пути `dir`/`archive` — от файла конфига.
     """
@@ -229,8 +229,8 @@ class IngestCfg(BaseModel):
     # ffmpeg, снимком инструментов и моделями. Пусто — раздачи нет вовсе (404), и это умолчание:
     # гигабайты рядом с сайтом заводит тот, кто решил раздавать. Путь — от файла конфига.
     dist_dir: str = ""
-    # Шлюз LLM через сайт: коллеге не нужен свой ключ (см. IngestLlmCfg).
-    llm: IngestLlmCfg = Field(default_factory=IngestLlmCfg)
+    # Шлюз LLM через сайт: коллеге не нужен свой ключ (см. UploadLlmCfg).
+    llm: UploadLlmCfg = Field(default_factory=UploadLlmCfg)
     # Доразметка загруженной записи на сервере (название, категория, темы, аннотация) —
     # `tools/auto_meta.py` первым шагом `after`, до индексации. Выключено по умолчанию: это
     # решение корпуса, а не платформы. Адрес и ключ шлюза берутся из `topic` и конфига движка.
@@ -393,7 +393,7 @@ class AppConfig(BaseModel):
     # тот лежит в git. Пусто — раздаём из локального каталога корпуса, как раньше.
     media_base: str = ""
     editing: EditingCfg = Field(default_factory=EditingCfg)
-    ingest: IngestCfg = Field(default_factory=IngestCfg)
+    upload: UploadCfg = Field(default_factory=UploadCfg)
     voices: VoicesCfg = Field(default_factory=VoicesCfg)
     auth: AuthCfg = Field(default_factory=AuthCfg)
     topic: TopicCfg = Field(default_factory=TopicCfg)
@@ -484,10 +484,10 @@ def _anchor(data: dict, base: Path) -> dict:
             fix(node, "index_stamp")
     if isinstance(data.get("voices"), dict):
         fix(data["voices"], "registry")
-    if isinstance(data.get("ingest"), dict):
-        fix(data["ingest"], "dir")
-        fix(data["ingest"], "archive")
-        fix(data["ingest"], "dist_dir")
+    if isinstance(data.get("upload"), dict):
+        fix(data["upload"], "dir")
+        fix(data["upload"], "archive")
+        fix(data["upload"], "dist_dir")
     return data
 
 
@@ -846,7 +846,7 @@ def _inside(base: Path, name: str) -> Path | None:
 # именем перехватило бы свою же страницу, и выглядело бы это как «раздел иногда не открывается».
 # ⚠️ Тот же список продублирован в web/js/router.js (RESERVED) — менять оба разом.
 RESERVED_SLUGS = {"chat", "records", "rec", "api", "css", "js", "assets", "voices", "calendar", "signin",
-                  "ingest"}
+                  "upload"}
 HUB_FILE = "hub.yml"
 
 

@@ -1,4 +1,4 @@
-"""Приём записи, транскрибированной на чужой машине (`app/content/ingest.py`, `app/api/ingest.py`).
+"""Приём записи, транскрибированной на чужой машине (`app/content/upload.py`, `app/api/upload.py`).
 
 Что здесь обязано быть закреплено, потому что цена ошибки — корпус:
   * номера голосов СДВИГАЮТСЯ в свой диапазон — иначе `names.json` подписал бы чужой `Speaker_3`
@@ -26,7 +26,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from app.content import ingest as core  # noqa: E402
+from app.content import upload as core  # noqa: E402
 from test_turn_edits import whole_artifact  # noqa: E402
 
 
@@ -89,7 +89,7 @@ def live(tmp_path, monkeypatch):
     monkeypatch.setenv("MORAG_WEB_CONFIG", str(REPO / "app" / "config.example.yml"))
     from app.main import app
     with TestClient(app) as c:
-        cfg = app.state.cfg.ingest
+        cfg = app.state.cfg.upload
         cfg.enabled, cfg.archive, cfg.after = True, str(archive), []
         cfg.index = [sys.executable, "-c", f"open({str(marker)!r}, 'w').write('1')"]
         cfg.min_free_gb = 0
@@ -104,10 +104,10 @@ def test_status_says_when_the_record_reaches_search(live):
     """⚠️ Индексация на сервере может идти планово (ночью, оптом — решение владельца 24.09), и
     тогда ждать её человеку незачем: запись читается сразу. Клиент должен знать, что обещать."""
     c, _, _, _ = live
-    rid = c.post("/api/ingest", json=manifest()).json()["id"]
-    assert c.get(f"/api/ingest/{rid}").json()["search"] == "now", "команда индексации задана — ждём"
-    c.app.state.cfg.ingest.index = []
-    assert c.get(f"/api/ingest/{rid}").json()["search"] == "later", "индексации по приёму нет — не обещаем"
+    rid = c.post("/api/upload", json=manifest()).json()["id"]
+    assert c.get(f"/api/upload/{rid}").json()["search"] == "now", "команда индексации задана — ждём"
+    c.app.state.cfg.upload.index = []
+    assert c.get(f"/api/upload/{rid}").json()["search"] == "later", "индексации по приёму нет — не обещаем"
 
 
 def manifest(**over) -> dict:
@@ -118,7 +118,7 @@ def manifest(**over) -> dict:
 def wait(c, rid, states=("done", "error"), timeout=30.0) -> dict:
     deadline = time.time() + timeout
     while time.time() < deadline:
-        body = c.get(f"/api/ingest/{rid}").json()
+        body = c.get(f"/api/upload/{rid}").json()
         if body["state"] in states:
             return body
         time.sleep(0.2)
@@ -127,30 +127,30 @@ def wait(c, rid, states=("done", "error"), timeout=30.0) -> dict:
 
 def upload_all(c, rid, video=b"\x00" * 1024) -> None:
     art = whole_artifact()
-    assert c.put(f"/api/ingest/{rid}/files/artifact.json", content=json.dumps(art, ensure_ascii=False).encode()).status_code == 200
+    assert c.put(f"/api/upload/{rid}/files/artifact.json", content=json.dumps(art, ensure_ascii=False).encode()).status_code == 200
     refs = {"refs": [{"speaker": "Speaker_3", "at": 9.0, "quote": "А почему не Kafka?"}]}
-    assert c.put(f"/api/ingest/{rid}/files/record.refs.json", content=json.dumps(refs).encode()).status_code == 200
+    assert c.put(f"/api/upload/{rid}/files/record.refs.json", content=json.dumps(refs).encode()).status_code == 200
     # кадры: маленький zip с одним jpg и одной попыткой выйти за каталог
     from io import BytesIO
     buf = BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("s001.jpg", b"jpg")
         zf.writestr("evil/../../x.txt", b"no")
-    assert c.put(f"/api/ingest/{rid}/files/slides.zip", content=buf.getvalue()).status_code == 200
-    assert c.put(f"/api/ingest/{rid}/files/video.mp4", content=video).status_code == 200
+    assert c.put(f"/api/upload/{rid}/files/slides.zip", content=buf.getvalue()).status_code == 200
+    assert c.put(f"/api/upload/{rid}/files/video.mp4", content=video).status_code == 200
 
 
 def test_end_to_end_upload_builds_a_record_with_shifted_voices(live):
     c, demo, archive, marker = live
-    r = c.post("/api/ingest", json=manifest())
+    r = c.post("/api/upload", json=manifest())
     assert r.status_code == 200, r.text
     rid = r.json()["id"]
     assert rid == "2026-03-12-kafka-bez-boli" and r.json()["video"] == "video.mp4"
-    assert c.get(f"/api/ingest/{rid}").json()["state"] == "uploading"
-    assert c.post(f"/api/ingest/{rid}/finish").status_code == 400, "без файлов принимать нечего"
+    assert c.get(f"/api/upload/{rid}").json()["state"] == "uploading"
+    assert c.post(f"/api/upload/{rid}/finish").status_code == 400, "без файлов принимать нечего"
 
     upload_all(c, rid)
-    r = c.post(f"/api/ingest/{rid}/finish")
+    r = c.post(f"/api/upload/{rid}/finish")
     assert r.status_code == 200 and r.json()["state"] == "queued", r.text
     body = wait(c, rid)
     assert body["state"] == "done", body
@@ -176,7 +176,7 @@ def test_end_to_end_upload_builds_a_record_with_shifted_voices(live):
 
     ids = {r["id"] for r in c.get("/api/records", params={"slug": "demo"}).json()["records"]}
     assert rid in ids, "индекс записей увидел новую без рестарта"
-    assert c.post("/api/ingest", json=manifest()).status_code == 409, "второй раз ту же — нельзя"
+    assert c.post("/api/upload", json=manifest()).status_code == 409, "второй раз ту же — нельзя"
 
 
 def vec(seed: int) -> list[float]:
@@ -212,12 +212,12 @@ def test_a_known_voice_keeps_its_corpus_number(live, tmp_path):
     в загруженной записи оказались двое известных корпусу людей под номерами 100001 и 100002."""
     c, demo, archive, marker = live
     path, _ = with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
-    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    rid = c.post("/api/upload", json=manifest()).json()["id"]
     upload_all(c, rid)
     prints = {"Speaker_3": {"centroid": vec(7), "air_sec": 640.0}}
-    assert c.put(f"/api/ingest/{rid}/files/voices.json",
+    assert c.put(f"/api/upload/{rid}/files/voices.json",
                  content=json.dumps(prints).encode()).status_code == 200
-    assert c.post(f"/api/ingest/{rid}/finish").status_code == 200
+    assert c.post(f"/api/upload/{rid}/finish").status_code == 200
     assert wait(c, rid)["state"] == "done"
 
     text = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
@@ -232,11 +232,11 @@ def test_a_known_voice_keeps_its_corpus_number(live, tmp_path):
 def test_an_unknown_voice_is_registered_once(live, tmp_path):
     c, demo, archive, marker = live
     path, _ = with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
-    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    rid = c.post("/api/upload", json=manifest()).json()["id"]
     upload_all(c, rid)
     prints = {"Speaker_3": {"centroid": vec(555), "air_sec": 640.0}}
-    c.put(f"/api/ingest/{rid}/files/voices.json", content=json.dumps(prints).encode())
-    c.post(f"/api/ingest/{rid}/finish")
+    c.put(f"/api/upload/{rid}/files/voices.json", content=json.dumps(prints).encode())
+    c.post(f"/api/upload/{rid}/finish")
     wait(c, rid)
     text = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
     assert "Speaker_20" in text, "незнакомец получил следующий номер корпуса, а не 100000+"
@@ -247,7 +247,7 @@ def test_an_unknown_voice_is_registered_once(live, tmp_path):
 def test_a_swap_of_numbers_does_not_collapse_two_voices(live, tmp_path):
     """⚠️ Узнавание возвращает ПЕРЕСТАНОВКИ: `Speaker_3 → Speaker_0`, `Speaker_0 → Speaker_3`.
     Последовательные замены схлопнули бы обоих в одного — молча и необратимо."""
-    from app.content.ingest import remap_speakers
+    from app.content.upload import remap_speakers
 
     text = json.dumps({"markdown": "[Speaker_0] раз\n[Speaker_3] два", "speaker_map": {"SPEAKER_00": "Speaker_3"}},
                       ensure_ascii=False)
@@ -261,7 +261,7 @@ def test_a_swap_of_numbers_does_not_collapse_two_voices(live, tmp_path):
 def test_a_voice_without_a_fingerprint_goes_to_the_loudest(live, tmp_path):
     """CAM++ пропускает кластеры без куска длиннее двух секунд — у такой метки отпечатка нет.
     Оставить её как есть нельзя: чужой `Speaker_5` столкнулся бы с корпусным."""
-    from app.content.ingest import remap_speakers
+    from app.content.upload import remap_speakers
 
     text = json.dumps({"markdown": "[Speaker_0] раз\n[Speaker_9] реплика без отпечатка"}, ensure_ascii=False)
     out = remap_speakers(text, {"Speaker_0": "Speaker_19"}, default="Speaker_19")
@@ -272,14 +272,14 @@ def test_a_voice_without_a_fingerprint_goes_to_the_loudest(live, tmp_path):
 def test_repeat_accept_does_not_renumber(live, tmp_path):
     c, demo, archive, marker = live
     with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
-    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    rid = c.post("/api/upload", json=manifest()).json()["id"]
     upload_all(c, rid)
-    c.put(f"/api/ingest/{rid}/files/voices.json",
+    c.put(f"/api/upload/{rid}/files/voices.json",
           content=json.dumps({"Speaker_3": {"centroid": vec(7), "air_sec": 640.0}}).encode())
-    c.post(f"/api/ingest/{rid}/finish")
+    c.post(f"/api/upload/{rid}/finish")
     wait(c, rid)
     before = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
-    assert c.post(f"/api/ingest/{rid}/finish").status_code == 200, "повторный приём — штатный"
+    assert c.post(f"/api/upload/{rid}/finish").status_code == 200, "повторный приём — штатный"
     wait(c, rid)
     assert (demo / "records" / rid / "record.md").read_text(encoding="utf-8") == before
 
@@ -289,9 +289,9 @@ def test_without_fingerprints_the_old_shift_still_works(live, tmp_path):
     безымянные: приём важнее имён."""
     c, demo, archive, marker = live
     with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
-    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    rid = c.post("/api/upload", json=manifest()).json()["id"]
     upload_all(c, rid)          # voices.json не кладём вовсе
-    c.post(f"/api/ingest/{rid}/finish")
+    c.post(f"/api/upload/{rid}/finish")
     wait(c, rid)
     text = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
     assert "Speaker_100003" in text
@@ -299,13 +299,13 @@ def test_without_fingerprints_the_old_shift_still_works(live, tmp_path):
 
 def test_second_record_gets_the_next_speaker_range(live):
     c, demo, archive, marker = live
-    a = c.post("/api/ingest", json=manifest(title="Первая", date="2026-04-01")).json()["id"]
+    a = c.post("/api/upload", json=manifest(title="Первая", date="2026-04-01")).json()["id"]
     upload_all(c, a)
-    assert c.post(f"/api/ingest/{a}/finish").status_code == 200
+    assert c.post(f"/api/upload/{a}/finish").status_code == 200
     wait(c, a)
-    b = c.post("/api/ingest", json=manifest(title="Вторая", date="2026-04-02")).json()["id"]
+    b = c.post("/api/upload", json=manifest(title="Вторая", date="2026-04-02")).json()["id"]
     upload_all(c, b)
-    assert c.post(f"/api/ingest/{b}/finish").status_code == 200
+    assert c.post(f"/api/upload/{b}/finish").status_code == 200
     wait(c, b)
     ta = (demo / "records" / a / "record.md").read_text(encoding="utf-8")
     tb = (demo / "records" / b / "record.md").read_text(encoding="utf-8")
@@ -315,28 +315,28 @@ def test_second_record_gets_the_next_speaker_range(live):
 def test_guards_whitelist_and_limits(live):
     c, demo, archive, marker = live
     from app.main import app
-    rid = c.post("/api/ingest", json=manifest(title="Лимиты")).json()["id"]
-    r = c.put(f"/api/ingest/{rid}/files/record.md", content=b"x")
+    rid = c.post("/api/upload", json=manifest(title="Лимиты")).json()["id"]
+    r = c.put(f"/api/upload/{rid}/files/record.md", content=b"x")
     assert r.status_code == 400 and "не из пакета" in r.json()["detail"]
-    assert c.put(f"/api/ingest/{rid}/files/video.webm", content=b"x").status_code == 400, "видео названо в манифесте"
-    app.state.cfg.ingest.max_gb = 1 / 1024 ** 2   # 1 КБ
-    assert c.put(f"/api/ingest/{rid}/files/video.mp4", content=b"\x00" * 4096).status_code == 413
+    assert c.put(f"/api/upload/{rid}/files/video.webm", content=b"x").status_code == 400, "видео названо в манифесте"
+    app.state.cfg.upload.max_gb = 1 / 1024 ** 2   # 1 КБ
+    assert c.put(f"/api/upload/{rid}/files/video.mp4", content=b"\x00" * 4096).status_code == 413
     assert not (demo / "incoming" / rid / "video.mp4").exists() and not list((demo / "incoming" / rid).glob("*.part"))
-    app.state.cfg.ingest.max_gb = 12
-    assert c.post("/api/ingest", json="не объект").status_code == 400
-    assert c.get("/api/ingest/2026-01-01-net-takoy").status_code == 404
+    app.state.cfg.upload.max_gb = 12
+    assert c.post("/api/upload", json="не объект").status_code == 400
+    assert c.get("/api/upload/2026-01-01-net-takoy").status_code == 404
     with pytest.raises(core.Refused):
-        app.state.ingest.dir("../../etc")   # id проверяется по форме до любого обращения к диску
+        app.state.upload.dir("../../etc")   # id проверяется по форме до любого обращения к диску
 
-    app.state.cfg.ingest.enabled = False
-    assert c.get("/api/ingest/options").status_code == 403
-    assert c.post("/api/ingest", json=manifest()).status_code == 403
-    app.state.cfg.ingest.enabled = True
+    app.state.cfg.upload.enabled = False
+    assert c.get("/api/upload/options").status_code == 403
+    assert c.post("/api/upload", json=manifest()).status_code == 403
+    app.state.cfg.upload.enabled = True
     app.state.cfg.editing.local_only = True
-    assert c.post("/api/ingest", json=manifest(title="С чужой машины")).status_code == 403, "без входа — только петля"
+    assert c.post("/api/upload", json=manifest(title="С чужой машины")).status_code == 403, "без входа — только петля"
 
 
 def test_options_list_events_and_file_names(live):
     c, demo, *_ = live
-    body = c.get("/api/ingest/options").json()
+    body = c.get("/api/upload/options").json()
     assert body["events"] == [] and "artifact.json" in body["files"] and "mp4" in body["video_ext"]

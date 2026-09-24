@@ -1,6 +1,6 @@
-# Окно приложения (tools/ingest_app.py): нативное окно macOS с WKWebView внутри и приёмом
+# Окно приложения (tools/upload_app.py): нативное окно macOS с WKWebView внутри и приёмом
 # перетаскивания. Отдельно от requirements-video.txt: инструментам экрана окно не нужно, а на
-# не-маке этих пакетов нет вовсе — `ingest.py app` тогда открывает страницу в браузере.
+# не-маке этих пакетов нет вовсе — `upload.py app` тогда открывает страницу в браузере.
 #
 #   python3 -m venv ~/asr-stack/video-venv && ~/asr-stack/video-venv/bin/pip install -r tools/requirements-app.txt
 pyobjc-core==12.2.2

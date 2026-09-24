@@ -60,7 +60,7 @@ def _guard(request: Request, need: str = "edit") -> None:
 
 def require(request: Request, need: str) -> None:
     """Третий рубеж сам по себе — КТО: право `need` при включённом входе, иначе петлевой адрес.
-    Общий для правки и для загрузки записей (`api/ingest.py`): у каждой свой флаг включения,
+    Общий для правки и для загрузки записей (`api/upload.py`): у каждой свой флаг включения,
     а ответ на «кто» один, и править его в двух местах значило бы однажды поправить в одном."""
     cfg = request.app.state.cfg
     auth = request.app.state.auth
@@ -120,14 +120,14 @@ async def identify(request: Request) -> dict:
     """Кто это говорит: отпечатки голосов записи → номера корпуса.
 
     Зовёт машина, которая расшифровала запись у себя: у неё свой счёт голосов, и подписывать по
-    нему нельзя — её `Speaker_3` не наш. Право то же, что у загрузки записи (`ingest`): узнавание
+    нему нельзя — её `Speaker_3` не наш. Право то же, что у загрузки записи (`upload`): узнавание
     и есть часть приёма, а отдельной «регистрации голоса» не существует — регистрировать без
     отпечатка нечего.
 
     `dry: true` — только показать карту: узнавание иначе занимает номера под запись, которую
     могли и не принять.
     """
-    require(request, "ingest")
+    require(request, "upload")
     path = _registry_path(request)
     cfg = request.app.state.cfg.voices
     body = await request.json()
@@ -150,7 +150,7 @@ async def identify(request: Request) -> dict:
 @router.get("/voices/registry")
 async def registry_stats(request: Request) -> dict:
     """Состояние реестра: сколько голосов, следующий номер, когда менялся. Векторов не отдаёт."""
-    require(request, "ingest")
+    require(request, "upload")
     try:
         return registry.stats(_registry_path(request))
     except registry.RegistryError as error:

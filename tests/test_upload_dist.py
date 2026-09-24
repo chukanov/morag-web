@@ -100,7 +100,7 @@ def live(tmp_path, monkeypatch):
     monkeypatch.setenv("MORAG_WEB_CONFIG", str(REPO / "app" / "config.example.yml"))
     from app.main import app
     with TestClient(app) as c:
-        cfg = app.state.cfg.ingest
+        cfg = app.state.cfg.upload
         cfg.enabled, cfg.dist_dir = True, str(mirror(tmp_path / "dist"))
         app.state.cfg.editing.local_only = False
         try:
@@ -110,14 +110,14 @@ def live(tmp_path, monkeypatch):
 
 
 def pass_of(c) -> str:
-    return c.get("/api/ingest/dist").json()["install"].split("/get/")[1].split("/")[0]
+    return c.get("/api/upload/dist").json()["install"].split("/get/")[1].split("/")[0]
 
 
 def test_page_gets_the_line_and_the_sizes(live):
     c, _ = live
-    body = c.get("/api/ingest/dist").json()
+    body = c.get("/api/upload/dist").json()
     assert body["bytes"] == 150 and body["days"] == 7
-    assert body["install"].startswith("/usr/bin/curl -fsSL http://testserver/api/ingest/get/"), (
+    assert body["install"].startswith("/usr/bin/curl -fsSL http://testserver/api/upload/get/"), (
         "системный curl: он верит связке ключей машины, а curl из conda/brew — только публичным корням")
     assert body["install"].endswith("/install | sh")
     assert [f["title"] for f in body["files"]] == ["питон", "инструменты"]
@@ -129,14 +129,14 @@ def test_the_line_says_https_when_the_proxy_says_so(live):
     где сервер ответит редиректом, а `| sh` выполнит пустоту."""
     c, app = live
     app.state.cfg.server.trusted_proxy_hops = 1
-    body = c.get("/api/ingest/dist", headers={"X-Forwarded-Proto": "https", "Host": "site.example.org"}).json()
-    assert body["install"].startswith("/usr/bin/curl -fsSL https://site.example.org/api/ingest/")
+    body = c.get("/api/upload/dist", headers={"X-Forwarded-Proto": "https", "Host": "site.example.org"}).json()
+    assert body["install"].startswith("/usr/bin/curl -fsSL https://site.example.org/api/upload/")
 
 
 def test_installer_comes_out_substituted(live):
     c, _ = live
     token = pass_of(c)
-    text = c.get(f"/api/ingest/get/{token}/install").text
+    text = c.get(f"/api/upload/get/{token}/install").text
     assert "@SITE@" not in text and "@TOKEN@" not in text, "неподставленный установщик ставит ничего"
     assert "http://testserver" in text and token in text
     assert text.startswith("#!/bin/sh")
@@ -145,49 +145,49 @@ def test_installer_comes_out_substituted(live):
 def test_mirror_file_is_given_by_pass_with_ranges(live):
     c, _ = live
     token = pass_of(c)
-    whole = c.get(f"/api/ingest/get/{token}/file/python.tar.gz")
+    whole = c.get(f"/api/upload/get/{token}/file/python.tar.gz")
     assert whole.status_code == 200 and whole.content == b"P" * 100
-    part = c.get(f"/api/ingest/get/{token}/file/python.tar.gz", headers={"Range": "bytes=10-19"})
+    part = c.get(f"/api/upload/get/{token}/file/python.tar.gz", headers={"Range": "bytes=10-19"})
     assert part.status_code == 206 and part.content == b"P" * 10, "докачка: полтора гигабайта рвутся"
 
 
 def test_a_bad_pass_opens_nothing(live):
     c, _ = live
     for bad in ("aaaa.bbbb", "", "%2e%2e"):
-        assert c.get(f"/api/ingest/get/{bad}/file/python.tar.gz").status_code in (403, 404)
-        assert c.get(f"/api/ingest/get/{bad}/install").status_code in (403, 404)
+        assert c.get(f"/api/upload/get/{bad}/file/python.tar.gz").status_code in (403, 404)
+        assert c.get(f"/api/upload/get/{bad}/install").status_code in (403, 404)
     token = pass_of(c)
-    assert c.get(f"/api/ingest/get/{token}/file/manifest.json").status_code == 200
-    assert c.get(f"/api/ingest/get/{token}/file/нет-такого").status_code == 404
+    assert c.get(f"/api/upload/get/{token}/file/manifest.json").status_code == 200
+    assert c.get(f"/api/upload/get/{token}/file/нет-такого").status_code == 404
 
 
 def test_zip_holds_one_runnable_command(live):
     c, _ = live
-    body = c.get("/api/ingest/app.zip")
+    body = c.get("/api/upload/app.zip")
     assert body.status_code == 200 and body.headers["content-type"] == "application/zip"
     with zipfile.ZipFile(__import__("io").BytesIO(body.content)) as zf:
         (info,) = zf.infolist()
         assert info.filename.endswith(".command"), "двойной щелчок по .command открывает Терминал"
         assert info.external_attr >> 16 & 0o111, "без бита запуска Finder откроет файл текстом"
         text = zf.read(info).decode("utf-8")
-    assert text.startswith("#!/bin/sh") and "/api/ingest/get/" in text and "| sh" in text
+    assert text.startswith("#!/bin/sh") and "/api/upload/get/" in text and "| sh" in text
 
 
 def test_without_a_mirror_everything_is_404(live):
     """Публичная платформа раздачи не держит — и это не ошибка сервера, а «здесь такого нет»."""
     c, app = live
-    app.state.cfg.ingest.dist_dir = ""
-    assert c.get("/api/ingest/dist").status_code == 404
-    assert c.get("/api/ingest/app.zip").status_code == 404
-    assert c.get("/api/ingest/get/что-угодно/install").status_code == 404
+    app.state.cfg.upload.dist_dir = ""
+    assert c.get("/api/upload/dist").status_code == 404
+    assert c.get("/api/upload/app.zip").status_code == 404
+    assert c.get("/api/upload/get/что-угодно/install").status_code == 404
 
 
 def test_pass_paths_are_open_at_the_gate_and_the_rest_is_not():
-    """Гейт входа пускает `/api/ingest/get/…` без сессии НАМЕРЕННО (у `curl` её нет), а страницу
+    """Гейт входа пускает `/api/upload/get/…` без сессии НАМЕРЕННО (у `curl` её нет), а страницу
     раздачи и zip — нет. Разъедется — либо установка не работает, либо зеркало открыто всем."""
     from app.auth.service import is_public
-    assert is_public("/api/ingest/get/abc.def/install")
-    assert is_public("/api/ingest/get/abc.def/file/python.tar.gz")
-    assert not is_public("/api/ingest/dist")
-    assert not is_public("/api/ingest/app.zip")
-    assert not is_public("/api/ingest/options")
+    assert is_public("/api/upload/get/abc.def/install")
+    assert is_public("/api/upload/get/abc.def/file/python.tar.gz")
+    assert not is_public("/api/upload/dist")
+    assert not is_public("/api/upload/app.zip")
+    assert not is_public("/api/upload/options")

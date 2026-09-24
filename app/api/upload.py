@@ -1,12 +1,12 @@
-"""Загрузка записи, транскрибированной на чужой машине (`tools/ingest.py` → сюда).
+"""Загрузка записи, транскрибированной на чужой машине (`tools/upload.py` → сюда).
 
 Четыре ручки и один принцип: сервер принимает только то, что перечислено, и делает с этим только
-то, что записано в `app/content/ingest.py`. Манифест → стейджинг; файлы — потоком на диск по
+то, что записано в `app/content/upload.py`. Манифест → стейджинг; файлы — потоком на диск по
 белому списку имён; `finish` — проверка комплекта и задача в очередь (та же, что у пересборок:
 приём и индексация идут строго по одной); статус — из стейджинга, переживает рестарт.
 
-Рубежи — как у правки: флаг `ingest.enabled` (в примере конфига выключен), отказ сервера, и
-КТО грузит — право `ingest` (любой вошедший) при включённом входе, иначе только петля.
+Рубежи — как у правки: флаг `upload.enabled` (в примере конфига выключен), отказ сервера, и
+КТО грузит — право `upload` (любой вошедший) при включённом входе, иначе только петля.
 """
 
 from __future__ import annotations
@@ -23,10 +23,10 @@ from fastapi.responses import FileResponse, PlainTextResponse, Response
 
 from ..auth import session
 from ..config import APP_DIR, family_dir
-from ..content import dist, ingest as core
+from ..content import dist, upload as core
 from .voices import require
 
-router = APIRouter(prefix="/api/ingest", tags=["ingest"])
+router = APIRouter(prefix="/api/upload", tags=["upload"])
 log = logging.getLogger(__name__)
 
 GB = 1024 ** 3
@@ -42,10 +42,10 @@ APP_COMMAND = "Установить — перетащите в Терминал
 
 def _staging(request: Request) -> core.Staging:
     cfg = request.app.state.cfg
-    if not cfg.ingest.enabled:
-        raise HTTPException(403, "загрузка записей выключена: включается в app/config.yml (ingest.enabled)")
-    require(request, "ingest")
-    return request.app.state.ingest
+    if not cfg.upload.enabled:
+        raise HTTPException(403, "загрузка записей выключена: включается в app/config.yml (upload.enabled)")
+    require(request, "upload")
+    return request.app.state.upload
 
 
 def _refused(error: core.Refused) -> HTTPException:
@@ -63,10 +63,10 @@ async def options(request: Request) -> dict:
     """
     staging = _staging(request)
     app_cfg = request.app.state.cfg
-    cfg = app_cfg.ingest
+    cfg = app_cfg.upload
     gateway = core.llm_env_of(request.app.state)
     llm = {"via_site": bool(cfg.llm.enabled and gateway),
-           "path": "/api/ingest/llm",
+           "path": "/api/upload/llm",
            "model": gateway.get("ASR_LLM_MODEL", "") if gateway else "",
            "cookie": app_cfg.auth.cookie_name if app_cfg.auth.enabled else ""}
     return {"events": core.events_of(staging.family), "video_ext": list(core.VIDEO_EXT),
@@ -96,7 +96,7 @@ async def upload(request: Request, rid: str, name: str) -> dict:
     """Один файл пакета — потоком на диск. Имя — из белого списка, размер — до `max_gb`,
     свободное место — не меньше `min_free_gb` (иначе 507: видео бывает по 8 ГБ)."""
     staging = _staging(request)
-    cfg = request.app.state.cfg.ingest
+    cfg = request.app.state.cfg.upload
     if not core.accept_name(name):
         raise HTTPException(400, f"файл {name} не из пакета; принимаются: {', '.join(core.FILES)}")
     try:
@@ -144,7 +144,7 @@ async def finish(request: Request, rid: str) -> dict:
     """
     staging = _staging(request)
     app = request.app
-    cfg = app.state.cfg.ingest
+    cfg = app.state.cfg.upload
     try:
         status = staging.status(rid)
     except core.Refused as error:
@@ -172,7 +172,7 @@ async def finish(request: Request, rid: str) -> dict:
         if cfg.index:
             queue.submit(f"index:{rid}", partial(core.index, staging, rid, cfg=cfg, root=root, family=family))
 
-    queued = queue.submit(f"ingest:{rid}", job)
+    queued = queue.submit(f"upload:{rid}", job)
     if queued:
         staging.set_status(rid, "queued")
     return {"id": rid, "state": "queued" if queued else status.get("state"), "queue": queue.status()}
@@ -184,10 +184,10 @@ async def finish(request: Request, rid: str) -> dict:
 
 
 def _mirror(request: Request) -> Path:
-    """Каталог зеркала — или 404. Проверка `ingest.enabled` та же, что у приёма записей."""
-    cfg = request.app.state.cfg.ingest
+    """Каталог зеркала — или 404. Проверка `upload.enabled` та же, что у приёма записей."""
+    cfg = request.app.state.cfg.upload
     if not (cfg.enabled and cfg.dist_dir):
-        raise HTTPException(404, "раздача установщика не настроена (ingest.dist_dir)")
+        raise HTTPException(404, "раздача установщика не настроена (upload.dist_dir)")
     root = Path(cfg.dist_dir)
     if not root.is_dir():
         raise HTTPException(404, "каталог раздачи не найден на сервере")
@@ -212,7 +212,7 @@ def _site(request: Request) -> str:
 
 @router.get("/dist")
 async def mirror(request: Request) -> dict:
-    """Что раздаём и чем это ставить. Под сессией и правом `ingest` — как сама загрузка."""
+    """Что раздаём и чем это ставить. Под сессией и правом `upload` — как сама загрузка."""
     _staging(request)
     root = _mirror(request)
     token = _pass(request)
@@ -220,8 +220,8 @@ async def mirror(request: Request) -> dict:
     data = dist.catalog(root)
     return {"files": [{k: v for k, v in f.items() if k != "sha256"} for f in data.get("files") or []],
             "bytes": data.get("bytes", 0), "built": data.get("built", ""),
-            "install": f"/usr/bin/curl -fsSL {site}/api/ingest/get/{token}/install | sh",
-            "app": "/api/ingest/app.zip", "days": dist.TTL // 86400}
+            "install": f"/usr/bin/curl -fsSL {site}/api/upload/get/{token}/install | sh",
+            "app": "/api/upload/app.zip", "days": dist.TTL // 86400}
 
 
 @router.get("/app.zip")
@@ -240,7 +240,7 @@ async def app_zip(request: Request):
                "clear\n"
                f'echo "Ставлю «Загрузить запись» с {site}"\n'
                "echo\n"
-               f'/usr/bin/curl -fsSL "{site}/api/ingest/get/{token}/install" | sh\n'
+               f'/usr/bin/curl -fsSL "{site}/api/upload/get/{token}/install" | sh\n'
                'echo\n'
                'echo "Окно можно закрыть."\n')
     buf = io.BytesIO()
@@ -250,7 +250,7 @@ async def app_zip(request: Request):
         info.create_system = 3                  # unix: иначе права из `external_attr` не читаются
         zf.writestr(info, command)
     return Response(buf.getvalue(), media_type="application/zip",
-                    headers={"Content-Disposition": 'attachment; filename="morag-ingest-mac.zip"',
+                    headers={"Content-Disposition": 'attachment; filename="morag-upload-mac.zip"',
                              "Cache-Control": "no-store"})
 
 
@@ -292,5 +292,5 @@ async def status(request: Request, rid: str) -> dict:
     # Когда запись попадёт в ПОИСК: сразу (сервер индексирует каждую) или позже, плановым
     # прогоном. Читается-то она сразу в любом случае — сайт берёт её с диска. Знать это должен
     # клиент: иначе он либо врёт «готово», либо заставляет ждать то, чего не будет.
-    out["search"] = "now" if request.app.state.cfg.ingest.index else "later"
+    out["search"] = "now" if request.app.state.cfg.upload.index else "later"
     return out

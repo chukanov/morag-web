@@ -217,4 +217,4 @@ export const logout = () => request("/api/auth/logout", { method: "POST" });
 
 // Раздача установщика: что лежит на зеркале, строка установки и ссылка на файл. 404 — раздачи
 // на этом сайте нет вовсе (публичная платформа, локальная разработка): страница это покажет.
-export const getDist = () => getJSON("/api/ingest/dist");
+export const getDist = () => getJSON("/api/upload/dist");

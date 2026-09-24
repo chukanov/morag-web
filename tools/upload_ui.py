@@ -1,6 +1,6 @@
-"""Страница вместо командной строки: локальный сервер на 127.0.0.1 и браузер поверх `ingest.py`.
+"""Страница вместо командной строки: локальный сервер на 127.0.0.1 и браузер поверх `upload.py`.
 
-Зачем. Конвейер тот же (`ingest.pipeline`), но человеку, который раз в месяц выкладывает свой
+Зачем. Конвейер тот же (`upload.pipeline`), но человеку, который раз в месяц выкладывает свой
 доклад, командная строка — барьер: флаги, кавычки, путь к файлу. Страница спрашивает то же
 самое полями, показывает ход работы и ссылку в конце.
 
@@ -13,7 +13,7 @@
     любая открытая в том же браузере страница могла бы постучаться на наш порт и запустить
     загрузку чужого файла на сайт: localhost от чужих вкладок сам по себе не защищён.
 
-Запуск — `ingest.py ui` (или `morag-ingest ui`), установщик делает ярлык для Finder.
+Запуск — `upload.py ui` (или `morag-upload ui`), установщик делает ярлык для Finder.
 """
 
 from __future__ import annotations
@@ -28,13 +28,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-import ingest
+import upload
 
 # Признак «ходим в шлюз через сайт» — путь его ручки (`app/api/llm.py`).
-SITE_LLM_PATH = ingest.SITE_LLM_PATH
+SITE_LLM_PATH = upload.SITE_LLM_PATH
 
 HERE = Path(__file__).resolve().parent
-PAGE = HERE / "ingest-ui.html"
+PAGE = HERE / "upload-ui.html"
 # Где искать видео: обычные папки Mac плюс то, что укажут переменной. Глубина — два уровня:
 # «Загрузки/Встречи/доклад.mp4» встречается, а сканировать весь диск незачем.
 FOLDERS = [Path.home() / "Downloads", Path.home() / "Desktop", Path.home() / "Movies"]
@@ -55,7 +55,7 @@ def videos() -> list[dict]:
         for path in folder.glob("*"):
             paths = [path] if path.is_file() else (list(path.glob("*")) if DEPTH > 1 and path.is_dir() else [])
             for f in paths:
-                if not f.is_file() or f.suffix.lower().lstrip(".") not in ingest.VIDEO_EXT or f in seen:
+                if not f.is_file() or f.suffix.lower().lstrip(".") not in upload.VIDEO_EXT or f in seen:
                     continue
                 seen.add(f)
                 stat = f.stat()
@@ -68,17 +68,17 @@ def videos() -> list[dict]:
 def site_state() -> dict:
     """Сайт, сессия и его подсказки (рубрики). Нет сессии — страница покажет вход."""
     try:
-        site, cookies = ingest.load_session(None)
-    except ingest.Step:
+        site, cookies = upload.load_session(None)
+    except upload.Step:
         return {"site": "", "logged": False, "events": []}
     out = {"site": site, "logged": bool(cookies), "events": []}
     try:
-        with ingest.client(site, cookies, timeout=10) as c:
+        with upload.client(site, cookies, timeout=10) as c:
             me = c.get("/api/auth/me")
             out["logged"] = me.status_code == 200 or not cookies
             if me.status_code == 200:
                 out["who"] = me.json().get("name") or me.json().get("login")
-            options = c.get("/api/ingest/options")
+            options = c.get("/api/upload/options")
             if options.status_code == 200:
                 out["events"] = options.json().get("events") or []
             elif options.status_code in (401, 403):
@@ -95,8 +95,8 @@ def llm_state() -> dict:
     ⚠️ «Через сайт» узнаём по адресу, а не по флагу в своём файле: флаг разъехался бы с тем,
     что на самом деле написано в окружении стека, и приложение врало бы про готовность.
     """
-    base = ingest.stack_env_value("ASR_LLM_BASE_URL")
-    key = ingest.stack_env_value("OR_KEY")
+    base = upload.stack_env_value("ASR_LLM_BASE_URL")
+    key = upload.stack_env_value("OR_KEY")
     return {"ready": bool(base and key), "via_site": base.endswith(SITE_LLM_PATH), "base": base}
 
 
@@ -109,30 +109,30 @@ def save_key(key: str) -> dict:
     """
     key = key.strip()
     if not key:
-        raise ingest.Step("пустой ключ")
+        raise upload.Step("пустой ключ")
     values = {"OR_KEY": key}
-    base = ingest.stack_env_value("ASR_LLM_BASE_URL")
+    base = upload.stack_env_value("ASR_LLM_BASE_URL")
     direct = gateway_from_mirror()
     if direct and base.endswith(SITE_LLM_PATH):
         values["ASR_LLM_BASE_URL"] = direct
-    ingest.set_stack_env(**values)
+    upload.set_stack_env(**values)
     checked = False
     base = values.get("ASR_LLM_BASE_URL", base)
     if base:
         try:
-            with ingest.client(base, {}, timeout=15) as c:
+            with upload.client(base, {}, timeout=15) as c:
                 checked = c.get("/models", headers={"Authorization": f"Bearer {key}"}).status_code == 200
         except Exception:  # noqa: BLE001 — шлюз недоступен: ключ всё равно сохранён
             checked = False
-    if ingest.stack_health():
-        ingest.stack("down")
+    if upload.stack_health():
+        upload.stack("down")
     return {"ok": True, "checked": checked}
 
 
 def gateway_from_mirror() -> str:
-    """Адрес корпоративного шлюза, привезённый установщиком (`~/morag-ingest/gateway.env`).
+    """Адрес корпоративного шлюза, привезённый установщиком (`~/morag-upload/gateway.env`).
     Нужен только запасному ходу «у меня свой ключ»."""
-    path = Path(os.environ.get("MORAG_INGEST_HOME") or (Path.home() / "morag-ingest")) / "gateway.env"
+    path = Path(os.environ.get("MORAG_UPLOAD_HOME") or (Path.home() / "morag-upload")) / "gateway.env"
     if not path.is_file():
         return ""
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -147,23 +147,23 @@ def start(fields: dict) -> dict:
     одна расшифровка (стек всё равно последователен)."""
     with LOCK:
         if STATE["stage"] not in ("idle", "done", "error"):
-            raise ingest.Step("одна запись уже в работе — дождитесь конца")
+            raise upload.Step("одна запись уже в работе — дождитесь конца")
         video = Path(fields.get("video") or "").expanduser()
-        checked = ingest.check_fields(video, fields.get("title") or "", fields.get("date") or "",
+        checked = upload.check_fields(video, fields.get("title") or "", fields.get("date") or "",
                                       fields.get("slides") or None)
         # ⚠️ Рубрику спрашиваем ЗДЕСЬ, до двадцати минут расшифровки: сервер без неё запись не
         # примет (она решает ветку и год), и узнавать об этом в самом конце — обидно.
         # Ловилось на первой живой загрузке 24.09. Порядок проверок — от файла к полям: человек
         # только что бросил видео, и про него он думает первым.
         if (site_state().get("events") or []) and not (fields.get("event") or "").strip():
-            raise ingest.Step("выберите рубрику — она решает, в какую ветку и год ляжет запись")
+            raise upload.Step("выберите рубрику — она решает, в какую ветку и год ляжет запись")
         STATE.update({"stage": "running", "id": checked["id"], "error": "", "url": "",
                       "started": time.time(), "finished": 0.0})
-        ingest.LOG.clear()
+        upload.LOG.clear()
 
     def work() -> None:
         try:
-            ingest.pipeline(
+            upload.pipeline(
                 video,
                 title=fields["title"], date=fields["date"], event=fields.get("event") or "",
                 speakers=[s.strip() for s in (fields.get("speakers") or "").split(",") if s.strip()],
@@ -171,24 +171,24 @@ def start(fields: dict) -> dict:
                 summary=fields.get("summary") or "", slides=fields.get("slides") or None,
                 with_stack=bool(fields.get("stack", True)), with_screen=not fields.get("no_screen"),
                 wait=True, title_auto=bool(fields.get("title_auto")))
-            site, _ = ingest.load_session(None)
-            STATE.update({"stage": "done", "finished": time.time(), "search": ingest.LAST_SEARCH,
+            site, _ = upload.load_session(None)
+            STATE.update({"stage": "done", "finished": time.time(), "search": upload.LAST_SEARCH,
                           "url": f"{site}/{fields.get('slug', '')}".rstrip("/")})
-        except ingest.Step as error:
+        except upload.Step as error:
             STATE.update({"stage": "error", "error": str(error), "finished": time.time()})
-            ingest.say(f"⚠️ {error}")
+            upload.say(f"⚠️ {error}")
         except Exception as error:
             STATE.update({"stage": "error", "error": str(error)[:400], "finished": time.time()})
-            ingest.say(f"⚠️ {type(error).__name__}: {error}")
+            upload.say(f"⚠️ {type(error).__name__}: {error}")
 
-    threading.Thread(target=work, daemon=True, name="ingest").start()
+    threading.Thread(target=work, daemon=True, name="upload").start()
     return {"id": STATE["id"]}
 
 
 class Handler(BaseHTTPRequestHandler):
     token = ""
 
-    def log_message(self, *args) -> None:  # тишина: свой лог ведёт `ingest.say`
+    def log_message(self, *args) -> None:  # тишина: свой лог ведёт `upload.say`
         pass
 
     # --- служебное -----------------------------------------------------------------------
@@ -228,9 +228,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self._guard(query):
             return
         if url.path == "/api/state":
-            self._json({"job": dict(STATE), "log": ingest.LOG[-200:], "stack": bool(ingest.stack_health()),
+            self._json({"job": dict(STATE), "log": upload.LOG[-200:], "stack": bool(upload.stack_health()),
                         "site": site_state(), "videos": videos(), "llm": llm_state(),
-                        "home": str(ingest.HOME), "ext": list(ingest.VIDEO_EXT)})
+                        "home": str(upload.HOME), "ext": list(upload.VIDEO_EXT)})
             return
         self._json({"error": "нет такого"}, 404)
 
@@ -248,28 +248,28 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if url.path == "/api/login":
                 site = (body.get("site") or "").rstrip("/")
-                with ingest.client(site, {}) as c:
+                with upload.client(site, {}) as c:
                     r = c.post("/api/auth/login", json={"login": body.get("login"), "password": body.get("password")})
                     if r.status_code != 200:
                         self._json({"error": r.json().get("detail", f"вход не удался ({r.status_code})")}, 400)
                         return
-                    ingest.save_session(site, {k: v for k, v in c.cookies.items()})
+                    upload.save_session(site, {k: v for k, v in c.cookies.items()})
                 # Вошли — значит ключ больше не нужен: стадии с LLM пойдут через сайт этой же
                 # сессией. Не получилось (сайт так не умеет) — не беда, скажем в настройках.
                 try:
-                    self._json({"ok": True, "llm": ingest.use_site_llm()})
-                except ingest.Step as error:
+                    self._json({"ok": True, "llm": upload.use_site_llm()})
+                except upload.Step as error:
                     self._json({"ok": True, "llm": {"via_site": False, "error": str(error)}})
                 return
             if url.path == "/api/start":
                 self._json(start(body))
                 return
             if url.path == "/api/stack":
-                ingest.stack("up" if body.get("up") else "down")
+                upload.stack("up" if body.get("up") else "down")
                 self._json({"ok": True})
                 return
             if url.path == "/api/llm":
-                self._json(ingest.use_site_llm())
+                self._json(upload.use_site_llm())
                 return
             if url.path == "/api/key":
                 self._json(save_key(str(body.get("key") or "")))
@@ -279,10 +279,10 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"error": "идёт работа"}, 400)
                     return
                 STATE.update({"stage": "idle", "id": "", "error": "", "url": ""})
-                ingest.LOG.clear()
+                upload.LOG.clear()
                 self._json({"ok": True})
                 return
-        except ingest.Step as error:
+        except upload.Step as error:
             self._json({"error": str(error)}, 400)
             return
         except Exception as error:
@@ -299,12 +299,12 @@ def start_server(port: int = 8099) -> tuple[ThreadingHTTPServer, str]:
         server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     except OSError:
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    threading.Thread(target=server.serve_forever, daemon=True, name="ingest-ui").start()
+    threading.Thread(target=server.serve_forever, daemon=True, name="upload-ui").start()
     return server, f"http://127.0.0.1:{server.server_address[1]}/?t={Handler.token}"
 
 
 def serve(port: int = 8099, open_browser: bool = True) -> int:
-    """Страница в браузере (запасной путь; основной — окно, `ingest_app.py`)."""
+    """Страница в браузере (запасной путь; основной — окно, `upload_app.py`)."""
     server, url = start_server(port)
     # ⚠️ `flush`: вывод в файл (запуск из `.command`, ярлыка, launchd) буферизуется, а процесс
     # потом спит часами — адрес со своим токеном не появлялся бы нигде вовсе.

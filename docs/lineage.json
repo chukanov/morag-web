@@ -34,7 +34,7 @@
     "app/api/edits.py": {
       "status": "ours"
     },
-    "app/api/ingest.py": {
+    "app/api/upload.py": {
       "status": "ours"
     },
     "app/api/llm.py": {
@@ -109,7 +109,7 @@
       "status": "verbatim",
       "sha256": "9343b620e82fa48e8e06b954dff6f245fb5673e70a1f0f062f4e95e89d59ce77"
     },
-    "app/content/ingest.py": {
+    "app/content/upload.py": {
       "status": "ours"
     },
     "app/content/rebuild.py": {
@@ -331,16 +331,16 @@
     "tests/test_favicon.py": {
       "status": "ours"
     },
-    "tests/test_ingest.py": {
+    "tests/test_upload.py": {
       "status": "ours"
     },
-    "tests/test_ingest_client.py": {
+    "tests/test_upload_client.py": {
       "status": "ours"
     },
-    "tests/test_ingest_dist.py": {
+    "tests/test_upload_dist.py": {
       "status": "ours"
     },
-    "tests/test_ingest_ui.py": {
+    "tests/test_upload_ui.py": {
       "status": "ours"
     },
     "tests/test_intro_frame.py": {
@@ -522,7 +522,7 @@
     "web/js/hub.js": {
       "status": "ours"
     },
-    "web/js/ingest.js": {
+    "web/js/upload.js": {
       "status": "ours"
     },
     "web/js/main.js": {
