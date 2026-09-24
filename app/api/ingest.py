@@ -108,8 +108,13 @@ async def upload(request: Request, rid: str, name: str) -> dict:
     declared = int(request.headers.get("content-length") or 0)
     if declared > cfg.max_gb * GB:
         raise HTTPException(413, f"файл больше {cfg.max_gb:g} ГБ")
-    if staging.free_bytes() - declared < cfg.min_free_gb * GB:
-        raise HTTPException(507, "на сервере мало места — напишите администратору")
+    free = staging.free_bytes()
+    if free - declared < cfg.min_free_gb * GB:
+        # ⚠️ Числа В САМОМ отказе: «мало места» заставляет администратора идти мерить диск, а
+        # человека — гадать, его ли файл виноват. Ловилось 24.09: порог был выставлен ровно на
+        # тот запас, который потом занял каталог раздачи.
+        raise HTTPException(507, f"на сервере мало места: свободно {free / GB:.1f} ГБ, "
+                                 f"нужно оставить {cfg.min_free_gb:g} ГБ — напишите администратору")
     target = staging.dir(rid) / name
     part = target.with_suffix(target.suffix + ".part")
     written = 0
@@ -130,19 +135,25 @@ async def upload(request: Request, rid: str, name: str) -> dict:
 
 @router.post("/{rid}/finish")
 async def finish(request: Request, rid: str) -> dict:
-    """Комплект на месте → приём и индексация в очередь. Повторный вызов после сбоя — штатный."""
+    """Комплект на месте → приём и индексация в очередь. Повторный вызов — штатный.
+
+    ⚠️ Проверка «уже принята» стоит ПЕРЕД проверкой комплекта, и это не косметика: после
+    успешного приёма артефакт уезжает в каталог записи, и `complete` честно сообщает, что его
+    нет. Человек, нажавший кнопку второй раз (а он нажимает — например, после отказа сервера),
+    получал «не хватает: artifact.json» вместо «готово, вот ссылка».
+    """
     staging = _staging(request)
     app = request.app
     cfg = app.state.cfg.ingest
     try:
-        missing = staging.complete(rid)
+        status = staging.status(rid)
     except core.Refused as error:
         raise _refused(error)
+    if status.get("state") == "done":
+        return {"id": rid, "state": "done", "record": status.get("record"), "url": status.get("url", "")}
+    missing = staging.complete(rid)
     if missing:
         raise HTTPException(400, "не хватает: " + "; ".join(missing))
-    status = staging.status(rid)
-    if status.get("state") == "done":
-        return {"id": rid, "state": "done", "record": status.get("record")}
     family = family_dir(app.state.cfg)
     root = app.state.rebuilder.root
     queue = app.state.rebuilder
@@ -150,7 +161,8 @@ async def finish(request: Request, rid: str) -> dict:
     llm_env = core.llm_env_of(app.state)
 
     async def job() -> None:
-        await core.accept(staging, rid, family=family, cfg=cfg, root=root, llm_env=llm_env)
+        await core.accept(staging, rid, family=family, cfg=cfg, root=root, llm_env=llm_env,
+                          voices=app.state.cfg.voices)
         url = ""
         for slug, corpus in app.state.corpora.items():
             corpus.index.refresh_if_stale()
@@ -277,4 +289,8 @@ async def status(request: Request, rid: str) -> dict:
     except core.Refused as error:
         raise _refused(error)
     out["queue"] = request.app.state.rebuilder.status()
+    # Когда запись попадёт в ПОИСК: сразу (сервер индексирует каждую) или позже, плановым
+    # прогоном. Читается-то она сразу в любом случае — сайт берёт её с диска. Знать это должен
+    # клиент: иначе он либо врёт «готово», либо заставляет ждать то, чего не будет.
+    out["search"] = "now" if request.app.state.cfg.ingest.index else "later"
     return out
