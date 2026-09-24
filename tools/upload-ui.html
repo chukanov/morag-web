@@ -59,9 +59,6 @@
           <label>Слайды PDF<input id="slides" placeholder="путь к файлу"></label>
         </div>
       </details>
-      <label style="display:flex;gap:9px;align-items:center;margin:10px 0 16px">
-        <input type="checkbox" id="screen" checked style="width:auto;margin:0"> Разобрать экран из видео — слайды попадут в поиск (дольше)
-      </label>
       <div class="line">
         <button id="go">Расшифровать и выложить</button>
         <span id="msg" class="msg"></span>
@@ -102,22 +99,9 @@
   <section>
     <details id="settings">
       <summary>Настройки и состояние</summary>
-      <!-- Ключ к шлюзу не спрашиваем: стадии с ИИ ходят через сайт этой же сессией
-           (app/api/llm.py). Поле остаётся запасным ходом — для своего ключа. -->
+      <!-- Ключ к шлюзу не спрашиваем и не предлагаем вовсе: стадии с ИИ ходят через сайт
+           той же сессией (app/api/llm.py). Две дороги в окне только путали (владелец, 24.09). -->
       <p class="msg" id="llm-msg" style="margin-top:10px"></p>
-      <div class="line" style="margin-bottom:12px">
-        <button id="llm-site" class="ghost" hidden>Ходить через сайт</button>
-        <button id="llm-own" class="ghost">У меня свой ключ</button>
-      </div>
-      <div id="key-box" hidden>
-        <label>Ваш ключ к LLM-шлюзу
-          <input id="key" type="password" placeholder="ключ из личного кабинета шлюза">
-        </label>
-        <div class="line" style="margin-bottom:12px">
-          <button id="save-key" class="ghost">Сохранить ключ</button>
-          <span id="key-msg" class="msg"></span>
-        </div>
-      </div>
       <p class="msg" id="env"></p>
     </details>
   </section>

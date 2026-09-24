@@ -212,33 +212,6 @@ def test_site_session_becomes_the_gateway_credential(server, tmp_path, monkeypat
     assert get(f"{base}/api/state?t=tok")[1]["llm"]["via_site"] is True
 
 
-def test_own_key_stays_as_a_fallback_and_restores_the_direct_address(server, tmp_path, monkeypatch):
-    """Запасной ход для тех, кто гоняет стек без сайта. ⚠️ Вместе с ключом возвращаем и адрес
-    САМОГО шлюза: если до этого ходили через сайт, чужой ключ к нашей ручке не подошёл бы, и
-    вышло бы «ключ вписан, а ничего не работает»."""
-    base, tmp = server
-    env_file = tmp / "asr.env"
-    env_file.write_text("ASR_LLM_BASE_URL=https://site.example.org/api/upload/llm\nOR_KEY=eyJzdWIi.c2lnbg\n",
-                        encoding="utf-8")
-    monkeypatch.setenv("ASR_STACK_ENV", str(env_file))
-    for name in ("OR_KEY", "ASR_LLM_BASE_URL"):
-        monkeypatch.delenv(name, raising=False)
-    home = tmp / "morag-upload"
-    home.mkdir()
-    (home / "gateway.env").write_text("ASR_LLM_BASE_URL=https://llm.example.org/api\n", encoding="utf-8")
-    monkeypatch.setenv("MORAG_UPLOAD_HOME", str(home))
-    monkeypatch.setattr(upload, "stack", lambda cmd: None)
-    monkeypatch.setattr(upload, "stack_health", lambda: None)
-
-    code, body = post(f"{base}/api/key?t=tok", {"key": "  свой-ключ  "})
-    assert code == 200 and body["ok"] is True
-    text = env_file.read_text(encoding="utf-8")
-    assert "OR_KEY=свой-ключ" in text and "eyJzdWIi" not in text
-    assert "ASR_LLM_BASE_URL=https://llm.example.org/api" in text, "адрес вернулся на сам шлюз"
-    assert text.count("OR_KEY=") == 1 and text.count("ASR_LLM_BASE_URL=") == 1
-    assert upload_ui.llm_state()["via_site"] is False
-    assert post(f"{base}/api/key?t=tok", {"key": "   "})[0] == 400, "пустой ключ не принимаем"
-
 
 def test_rubric_is_asked_before_the_work_not_after(server, tmp_path):
     """⚠️ Живой случай 24.09: расшифровка и разбор экрана прошли, а сервер отверг манифест — в нём

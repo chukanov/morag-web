@@ -278,14 +278,12 @@ async function tick() {
   ].filter(Boolean).join(" · ");
   // Настройки сами раскрываются только если ходить в шлюз нечем: это единственное, что человек
   // обязан сделать руками, — и то лишь когда сайт не умеет ходить за него.
-  if (!s.llm?.ready && !id("settings").open && job.stage === "idle") id("settings").open = true;
-  id("llm-site").hidden = !!s.llm?.via_site;
-  id("llm-own").hidden = !s.llm?.via_site;
   if (!id("llm-msg").dataset.touched) {
+    // ⚠️ Дорога ОДНА: стадии с ИИ ходят в шлюз через сайт той же сессией. Свой ключ в окне
+    // больше не спрашиваем — две дороги только путали (владелец, 24.09).
     id("llm-msg").textContent = s.llm?.via_site
-      ? "Ключ не нужен: стадии с ИИ идут через сайт, от вашего имени. Работает, пока вы залогинены."
-      : (s.llm?.ready ? "Стадии с ИИ идут вашим ключом напрямую в шлюз."
-                      : "Войдите на сайт — и ключ не понадобится: ИИ-стадии пойдут через него.");
+      ? "Стадии с ИИ идут в шлюз через сайт — ключ не нужен."
+      : "Войдите на сайт: стадии с ИИ идут в шлюз его сессией.";
   }
 }
 
@@ -293,7 +291,7 @@ async function tick() {
 function llmLine(llm) {
   if (!llm) return "";
   if (llm.via_site) return "ИИ-стадии через сайт (ключ не нужен)";
-  if (llm.ready) return "ИИ-стадии своим ключом";
+  if (llm.ready) return "ИИ-стадии настроены";
   return '<span class="bad">ИИ-стадии некуда отправить: войдите на сайт</span>';
 }
 
@@ -309,34 +307,6 @@ id("do-login").onclick = async () => {
   } catch (e) { id("login-msg").textContent = e.message; id("login-msg").className = "msg bad"; }
 };
 
-id("llm-own").onclick = () => { id("key-box").hidden = false; id("key").focus(); };
-id("llm-site").onclick = async () => {
-  const msg = id("llm-msg");
-  msg.dataset.touched = "1";
-  msg.textContent = "настраиваю…";
-  msg.className = "msg";
-  try {
-    const r = await api("/api/llm", {});
-    msg.textContent = r.via_site
-      ? (r.checked ? "Готово: ИИ-стадии идут через сайт." : "Настроено, но сайт не ответил на проверку.")
-      : "Этот сайт не умеет ходить в шлюз за вас — нужен свой ключ.";
-    msg.className = r.via_site ? "msg ok" : "msg bad";
-    id("key-box").hidden = !!r.via_site;
-  } catch (e) { msg.textContent = e.message; msg.className = "msg bad"; }
-};
-
-id("save-key").onclick = async () => {
-  id("key-msg").textContent = "проверяю…";
-  id("key-msg").className = "msg";
-  try {
-    const r = await api("/api/key", {key: id("key").value.trim()});
-    id("key").value = "";
-    id("key-msg").textContent = r.checked ? "ключ работает" : "сохранено";
-    id("key-msg").className = "msg ok";
-    await tick();
-  } catch (e) { id("key-msg").textContent = e.message; id("key-msg").className = "msg bad"; }
-};
-
 id("go").onclick = async () => {
   id("msg").textContent = "";
   id("msg").className = "msg";
@@ -345,8 +315,7 @@ id("go").onclick = async () => {
     await api("/api/start", {
       video: picked.path, title: id("title").value.trim(), date: id("date").value,
       event: id("event").value, speakers: id("speakers").value, tags: id("tags").value,
-      summary: id("summary").value, slides: id("slides").value.trim(),
-      no_screen: !id("screen").checked, stack: true, title_auto: !titleTouched,
+      summary: id("summary").value, slides: id("slides").value.trim(), stack: true, title_auto: !titleTouched,
     });
     lastLogLen = -1;
     cursor = 0;

@@ -122,48 +122,6 @@ def llm_state() -> dict:
     return {"ready": bool(base and key), "via_site": base.endswith(SITE_LLM_PATH), "base": base}
 
 
-def save_key(key: str) -> dict:
-    """Запасной ход: свой ключ к шлюзу (кто гоняет стек без сайта или хочет свой расход).
-
-    ⚠️ Вместе с ключом возвращаем и АДРЕС самого шлюза: если до этого стек ходил через сайт,
-    в окружении лежит наш путь, и чужой ключ к нему не подойдёт — вышло бы «ключ вписан, а
-    ничего не работает». Адрес берём из настроек корпуса, привезённых установщиком.
-    """
-    key = key.strip()
-    if not key:
-        raise upload.Step("пустой ключ")
-    values = {"OR_KEY": key}
-    base = upload.stack_env_value("ASR_LLM_BASE_URL")
-    direct = gateway_from_mirror()
-    if direct and base.endswith(SITE_LLM_PATH):
-        values["ASR_LLM_BASE_URL"] = direct
-    upload.set_stack_env(**values)
-    checked = False
-    base = values.get("ASR_LLM_BASE_URL", base)
-    if base:
-        try:
-            with upload.client(base, {}, timeout=15) as c:
-                checked = c.get("/models", headers={"Authorization": f"Bearer {key}"}).status_code == 200
-        except Exception:  # noqa: BLE001 — шлюз недоступен: ключ всё равно сохранён
-            checked = False
-    if upload.stack_health():
-        upload.stack("down")
-    return {"ok": True, "checked": checked}
-
-
-def gateway_from_mirror() -> str:
-    """Адрес корпоративного шлюза, привезённый установщиком (`~/morag-upload/gateway.env`).
-    Нужен только запасному ходу «у меня свой ключ»."""
-    path = Path(os.environ.get("MORAG_UPLOAD_HOME") or (Path.home() / "morag-upload")) / "gateway.env"
-    if not path.is_file():
-        return ""
-    for line in path.read_text(encoding="utf-8").splitlines():
-        name, _, value = line.strip().removeprefix("export ").partition("=")
-        if name.strip() == "ASR_LLM_BASE_URL":
-            return value.strip().strip('"').strip("'")
-    return ""
-
-
 def preheat() -> None:
     """Прогреть модели ФОНОМ, пока человек выбирает файл и заполняет поля.
 
@@ -412,9 +370,6 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if url.path == "/api/llm":
                 self._json(upload.use_site_llm())
-                return
-            if url.path == "/api/key":
-                self._json(save_key(str(body.get("key") or "")))
                 return
             if url.path == "/api/reset":
                 if STATE["stage"] == "running":

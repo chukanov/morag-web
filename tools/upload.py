@@ -539,10 +539,30 @@ def local_record(work: Path, artifact: Path, rid: str, title: str, date: str) ->
     return record
 
 
+def has_video_stream(video: Path) -> bool:
+    """Есть ли в файле картинка вообще.
+
+    ⚠️ Галочки «разобрать экран» больше нет — экран разбираем всегда. Значит, файл без
+    видеодорожки (бывает: запись встречи сохранили одним звуком в контейнере mp4) обязан
+    пройти целиком, а не упасть на первом же шаге разбора кадров.
+    """
+    try:
+        out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                              "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(video)],
+                             capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return True                      # не смогли спросить — пробуем разобрать, как раньше
+    return "video" in out.stdout
+
+
 def screen(work: Path, video: Path, record: Path) -> None:
     done = work / "screen.done"
     if done.is_file():
         say("экран уже снят — пропускаю")
+        return
+    if not has_video_stream(video):
+        say("в файле нет видеодорожки — экран разбирать нечего")
+        done.write_text("no-video\n", encoding="utf-8")
         return
     py = VIDEO_PY if VIDEO_PY.is_file() else Path(sys.executable)
     env = {**os.environ, "ASR_STACK_ENV": str(STACK_ENV), "MORAG_WEB_CORPUS": str(temp_family())}
