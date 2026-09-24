@@ -93,9 +93,9 @@ export function wave(root) {
   function shaded(ctx, idx, y0, y1) {
     const base = colour(idx);
     const g = ctx.createLinearGradient(0, y0, 0, y1);
-    g.addColorStop(0, mix(base, "#FFFFFF", 0.14));
-    g.addColorStop(0.45, base);
-    g.addColorStop(1, mix(base, "#000000", 0.45));
+    g.addColorStop(0, mix(base, "#FFFFFF", 0.32));
+    g.addColorStop(0.42, base);
+    g.addColorStop(1, mix(base, "#000000", 0.62));
     return g;
   }
 
@@ -143,7 +143,8 @@ export function wave(root) {
       const eased = 1 - (1 - done) ** 3;
       // ⚠️ Между репликами — белая граница в два пикселя (владелец, 24.09): без неё соседние
       // куски одного цвета сливаются в одно пятно и по ленте не видно, где менялись реплики.
-      const seam = Math.max(1, Math.round(2 * (canvas.width / (canvas.clientWidth || canvas.width))));
+      // Шов в ОДИН экранный пиксель (владелец): в буфере это dpr точек, а не одна.
+      const seam = Math.max(1, Math.round(canvas.width / (canvas.clientWidth || canvas.width)));
       for (const [a, b, idx] of spans) {
         const x0 = (a / audioSec) * W;
         const x1 = Math.min((b / audioSec) * W, W * eased);
