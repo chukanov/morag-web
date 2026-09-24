@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стенд: показ работы</title>
+<link rel="stylesheet" href="./tokens.css">
+<link rel="stylesheet" href="./fonts.css">
+<link rel="stylesheet" href="./upload.css">
+<style>
+  .bench{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+  .bench label{margin:0;display:inline-flex;gap:6px;align-items:center}
+  .bench input[type=range]{width:220px;margin:0}
+  .bench .now{font:12px/1.5 var(--mono);color:var(--ink-faint);margin-left:auto}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="grow">
+      <h1>Стенд показа работы</h1>
+      <p class="sub">Те же сцены, что в окне загрузки, но по записанной трассе событий —
+      настраивать анимацию без двадцатиминутной расшифровки.</p>
+    </div>
+    <button id="theme" class="icon" title="Светлая или тёмная">◐</button>
+  </header>
+
+  <section>
+    <h2>Трасса</h2>
+    <div class="bench">
+      <button id="play">▶ Пуск</button>
+      <button id="step" class="ghost">Шаг</button>
+      <button id="reset" class="ghost">Сначала</button>
+      <label>скорость
+        <select id="speed">
+          <option value="1">×1</option>
+          <option value="4" selected>×4</option>
+          <option value="20">×20</option>
+          <option value="0">мгновенно</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="only-bad" style="width:auto"> только отвергнутые</label>
+      <label><input type="checkbox" id="calm" style="width:auto"> меньше движения</label>
+      <span class="now" id="pos"></span>
+    </div>
+    <input type="range" id="scrub" min="0" value="0" style="width:100%">
+    <p class="msg">Своя трасса: перетащите <b>events.jsonl</b> из рабочей папки записи сюда.</p>
+  </section>
+
+  <section id="work">
+    <h2>Идёт работа</h2>
+    <div class="bar" id="bar"><i></i></div>
+    <p class="mood" id="work-mood"></p>
+    <div class="scene">
+      <h3>Звук и голоса <span>— цветом отмечено, кто говорит; распознанное закрашивается</span></h3>
+      <div id="scene-wave"></div>
+    </div>
+    <div class="scene" id="scene-fixes" hidden>
+      <h3>Исправления <span>— модель предлагает, код проверяет; порядок по готовности реплик</span></h3>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+// Стенд намеренно НЕ переиспользует `app.js`: тот занят сетью и формой. Общее здесь — сами
+// сцены и правила показа, то есть ровно то, что настраивается.
+import { state as showState } from "./play.js";
+import { fixes } from "./fixes.js";
+import { wave } from "./wave.js";
+
+const id = (x) => document.getElementById(x);
+const scenes = { wave: wave(id("scene-wave")), fixes: fixes(id("scene-fixes")) };
+let trace = [];
+let at = 0;
+let timer = null;
+const show = { stage: "", done: [], counter: null, lastAt: 0, error: "" };
+let clock = 0;               // «сейчас» стенда: время трассы, а не настенное
+
+function paint() {
+  const s = showState({ ...show, now: clock });
+  if (s.pct != null) id("bar").firstElementChild.style.width = `${Math.min(100, s.pct)}%`;
+  id("work-mood").textContent = s.say;
+  id("work-mood").className = "mood " + s.mood;
+  id("pos").textContent = trace.length
+    ? `${at} из ${trace.length} · ${Math.round(clock)} с прогона` : "трассы нет";
+}
+
+function feed(e) {
+  if (id("only-bad").checked && e.t === "turn.fix" && e.ok) return;
+  clock = e.at ?? clock;
+  show.lastAt = clock;
+  if (e.t === "stage.start") { show.stage = e.stage; show.counter = null; }
+  if (e.t === "stage.end" && !show.done.includes(e.stage)) show.done.push(e.stage);
+  if (e.t === "chunk.start") show.counter = { i: e.i, n: e.n };
+  if (e.t === "turn.done") show.counter = { i: e.done, n: e.n };
+  scenes.wave.apply(e);
+  scenes.fixes.apply(e);
+}
+
+function step(n = 1) {
+  for (let k = 0; k < n && at < trace.length; k++) feed(trace[at++]);
+  id("scrub").value = String(at);
+  paint();
+}
+
+function play() {
+  if (timer) { clearInterval(timer); timer = null; id("play").textContent = "▶ Пуск"; return; }
+  const speed = Number(id("speed").value);
+  if (speed === 0) { step(trace.length); return; }
+  id("play").textContent = "⏸ Пауза";
+  timer = setInterval(() => {
+    if (at >= trace.length) return play();
+    // Идём по ВРЕМЕНИ трассы, а не по одному событию за тик: иначе пачка исправлений
+    // растянется в ровную ленту и перестанет быть похожей на живой прогон.
+    const until = clock + 0.1 * speed;
+    while (at < trace.length && (trace[at].at ?? clock) <= until) feed(trace[at++]);
+    clock = until;
+    id("scrub").value = String(at);
+    paint();
+  }, 100);
+}
+
+function load(text) {
+  trace = text.split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } })
+              .filter(Boolean);
+  id("scrub").max = String(trace.length);
+  reset();
+}
+
+function reset() {
+  if (timer) play();
+  at = 0; clock = 0;
+  show.stage = ""; show.done = []; show.counter = null; show.error = "";
+  scenes.wave.reset();
+  scenes.fixes.reset();
+  scenes.wave.fit();
+  paint();
+}
+
+id("play").onclick = play;
+id("step").onclick = () => step(1);
+id("reset").onclick = reset;
+id("scrub").oninput = () => {
+  const want = Number(id("scrub").value);
+  if (want < at) { const keep = want; reset(); step(keep); return; }
+  step(want - at);
+};
+id("theme").onclick = () => {
+  const now = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", now);
+};
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f) load(await f.text());
+});
+window.addEventListener("resize", () => scenes.wave.fit());
+
+fetch("./bench-sample.jsonl").then((r) => r.text()).then(load).catch(() => paint());
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+/* Окно загрузки записи. Токены и шрифты — те же, что у сайта (`tokens.css`, `fonts.css`), чтобы
+   окно читалось как его продолжение, а не как чужая утилита. Своей палитры здесь нет ни одной. */
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);
+     font:15px/1.6 var(--sans)}
+main{max-width:920px;margin:0 auto;padding:26px 20px 56px;display:grid;gap:18px}
+
+h1{font:600 21px/1.25 var(--serif);margin:0}
+.sub{color:var(--ink-dim);font-size:13px;margin:4px 0 0}
+header{display:flex;align-items:flex-start;gap:14px}
+header .grow{flex:1}
+section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;
+        box-shadow:var(--shadow-sm)}
+/* Подпись-заголовок раздела — тот же идиом, что у сайта: моно, капсом, разряжённый. */
+h2{font:600 12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.06em;
+   color:var(--ink-dim);margin:0 0 14px}
+label{display:block;font-size:12px;color:var(--ink-dim);margin:0 0 12px}
+input,select,textarea{width:100%;margin-top:5px;padding:10px 12px;font:inherit;color:var(--ink);
+  background:var(--ground);border:1px solid var(--line);border-radius:9px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-wash);outline-offset:1px;
+  border-color:var(--accent)}
+textarea{min-height:70px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:560px){ .row{grid-template-columns:1fr} }
+button{font:inherit;padding:11px 20px;border-radius:10px;border:1px solid transparent;
+  background:var(--accent-fill);color:var(--accent-ink);cursor:pointer;font-weight:500}
+button:hover{filter:brightness(1.06)}
+button.ghost{background:transparent;border-color:var(--line);color:var(--ink);font-weight:400;padding:8px 14px}
+button[disabled]{opacity:.45;cursor:default;filter:none}
+button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:7px 10px;font-size:13px}
+
+/* зона перетаскивания — главное на экране */
+.drop{border:2px dashed var(--line);border-radius:16px;padding:34px 20px;text-align:center;
+      background:var(--surface);transition:background .15s,border-color .15s;cursor:pointer}
+.drop.hot{border-color:var(--accent);background:var(--accent-wash)}
+.drop .big{font:600 17px/1.3 var(--serif);margin:0 0 6px}
+.drop .hint{color:var(--ink-dim);font-size:13px;margin:0}
+.drop.has{text-align:left;padding:16px 18px;border-style:solid;cursor:default}
+.file{display:flex;align-items:center;gap:12px}
+.file .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .meta{color:var(--ink-dim);font-size:12px}
+.recent{margin:14px 0 0;display:grid;gap:2px;max-height:150px;overflow:auto}
+.recent b{font-weight:600}
+.recent i{font-style:normal;color:var(--ink-dim);font-size:12px}
+.recent button{background:none;border:0;color:inherit;text-align:left;padding:7px 10px;border-radius:8px;
+               display:flex;gap:10px;align-items:baseline;width:100%;font-weight:400}
+.recent button:hover{background:var(--surface-2);filter:none}
+
+/* --- показ работы -------------------------------------------------------------------------- */
+.bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:2px 0 10px}
+.bar i{display:block;height:100%;width:0;background:var(--accent-fill);border-radius:99px;
+       transition:width .45s ease}
+.bar.err i{background:var(--bad)}
+
+/* Настроение подписи — три состояния, и они РАЗНЫЕ по смыслу: «идёт» это событие за последние
+   три секунды, «считает» — стадия молчит по своей природе, «молчит» — мы не понимаем. */
+.mood{font:12px/1.5 var(--mono);color:var(--ink-dim);margin:0 0 14px;min-height:1.5em}
+.mood.считает{color:var(--sonar)}
+.mood.молчит{color:var(--bad)}
+.mood.ошибка{color:var(--bad)}
+
+.scene{margin:0 0 16px}
+.scene > h3{font:600 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.06em;
+            color:var(--ink-faint);margin:0 0 8px;font-weight:600}
+.scene > h3 span{text-transform:none;letter-spacing:0;color:var(--ink-faint);font-weight:400}
+
+/* волна */
+.wv-c{display:block;width:100%;border-radius:10px;background:var(--ground)}
+.wv-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 0;font:12px/1.4 var(--mono);
+           color:var(--ink-dim)}
+.wv-who{display:inline-flex;align-items:center;gap:6px}
+.wv-who i{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+/* исправления */
+.fx-ticks{display:flex;gap:2px;flex-wrap:wrap;margin:0 0 10px}
+.fx-tick{width:3px;height:9px;border-radius:2px;background:var(--surface-2);display:inline-block;
+         transition:background .2s}
+.fx-tick.kept{background:var(--ink-faint)}
+.fx-tick.changed{background:var(--good)}
+.fx-tick.failed{background:var(--bad)}
+
+.fx-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:280px;overflow:auto}
+.fx{display:flex;align-items:baseline;gap:8px;padding:5px 9px;border-radius:8px;
+    background:var(--surface-2);font-size:14px;border-left:2px solid transparent}
+.fx time{font:11px/1.4 var(--mono);color:var(--ink-faint);min-width:3.2em}
+/* ⚠️ Зачёркнуто то, чего БОЛЬШЕ НЕТ, и решает это РАЗМЕТКА (см. fixes.js): у принятой замены
+   исчезло старое слово, у отвергнутой — не состоялось предложение модели. */
+.fx-was{color:var(--ink-dim);text-decoration-color:var(--ink-faint)}
+.fx-arrow{color:var(--ink-faint)}
+/* ⚠️ Переход живёт на ВХОДЯЩЕМ состоянии (`.land`), поэтому появление плавное, а удаление
+   мгновенное — тот же приём, что у подсветки слова в караоке. Узел — слово, не буква. */
+.fx-now{opacity:0;max-width:0;overflow:hidden;white-space:nowrap;font-weight:600;color:var(--ink)}
+.fx.land .fx-now{opacity:1;max-width:22em;transition:opacity .22s ease,max-width .22s ease}
+.fx[data-ok="0"]{border-left-color:var(--bad)}
+.fx[data-ok="0"] .fx-now{color:var(--bad);text-decoration-color:var(--bad)}
+.fx-why{font:11px/1.4 var(--mono);color:var(--ink-faint);margin-left:auto;white-space:nowrap}
+.fx-count{font:12px/1.5 var(--mono);color:var(--ink-dim);margin:10px 0 0}
+
+pre{margin:10px 0 0;padding:12px;background:var(--ground);border:1px solid var(--line);border-radius:9px;
+    max-height:190px;overflow:auto;font:12px/1.5 var(--mono);white-space:pre-wrap;color:var(--ink-dim)}
+details summary{cursor:pointer;color:var(--ink-dim);font-size:13px;margin:2px 0 10px}
+.line{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.msg{font-size:13px;color:var(--ink-dim)}
+.msg.bad,.bad{color:var(--bad)} .msg.ok,.ok{color:var(--good)}
+.done{text-align:center;padding:26px 20px}
+.done .big{font:600 18px/1.3 var(--serif);margin:0 0 6px}
+a{color:var(--accent)}
+[hidden]{display:none!important}
+
+/* ⚠️ «Меньше движения» — глобально и по-настоящему: сцены обязаны остаться читаемой статикой.
+   Canvas под этот запрос не попадает вовсе, поэтому он гасится в JS (`dom.js::reduced`). */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
+  .fx-now{opacity:1;max-width:22em}
+}

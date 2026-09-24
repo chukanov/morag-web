@@ -263,12 +263,42 @@ def test_reset_clears_the_finished_job_but_not_a_running_one(server):
 
 def test_page_has_the_drop_zone_and_the_native_hook(server):
     """Страница — одна на окно и браузер: зона перетаскивания, поиск файла по имени (браузер)
-    и `window.dropVideo` (окно отдаёт настоящий путь)."""
+    и `window.dropVideo` (окно отдаёт настоящий путь).
+
+    ⚠️ Разметка и логика с 24.09 разведены по файлам (`tools/ui/`), поэтому крючок окна ищем в
+    модуле, а на странице — что она этот модуль подключает. Иначе проверка молча ослабнет.
+    """
     base, _ = server
     body = get(f"{base}/")[1]
     assert "Перетащите сюда запись" in body
-    assert "window.dropVideo" in body, "окно зовёт эту функцию с путём файла"
-    assert "title_auto" in body, "страница говорит серверу, что название подставлено из имени файла"
+    assert '/ui/app.js' in body, "страница подключает свой модуль"
+    app = (Path(upload_ui.UI) / "app.js").read_text(encoding="utf-8")
+    assert "window.dropVideo" in app, "окно зовёт эту функцию с путём файла"
+    assert "title_auto" in app, "страница говорит серверу, что название подставлено из имени файла"
+
+
+def test_everything_the_page_links_to_exists_and_is_served(server):
+    """⚠️ Окно ставится коллеге с зеркала и работает ОФЛАЙН: мёртвая ссылка на стиль или шрифт
+    там не «некрасиво», а нечитаемая страница без единой ошибки в консоли, которую никто не
+    увидит. Поэтому каждая ссылка страницы проверяется файлом И живым ответом сервера."""
+    import re
+
+    base, _ = server
+    page = Path(upload_ui.PAGE).read_text(encoding="utf-8")
+    links = re.findall(r'(?:href|src)="(/ui/[^"]+)"', page)
+    assert links, "страница обязана ссылаться на свои стили и модуль"
+    for link in links:
+        assert (Path(upload_ui.UI) / link[4:]).is_file(), f"{link} — файла нет"
+        code, body, ctype = raw(f"{base}{link}")
+        assert code == 200 and body, f"{link} — сервер не отдал"
+        assert ctype.split(";")[0] in ("text/css", "text/javascript"), ctype
+
+    # Шрифты подключает не страница, а `fonts.css` — их проверяем отдельно, тем же правилом.
+    css = (Path(upload_ui.UI) / "fonts.css").read_text(encoding="utf-8")
+    fonts = re.findall(r'url\("\./([^"]+)"\)', css)
+    assert len(set(fonts)) == 6, fonts
+    for name in set(fonts):
+        assert raw(f"{base}/ui/{name}")[0] == 200, name
 
 
 def test_window_falls_back_to_the_browser_without_pyobjc(monkeypatch):

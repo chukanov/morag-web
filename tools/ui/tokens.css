@@ -1,0 +1,25 @@
+/* Дизайн-токены пресета. Значения из site.yml переопределяют их в рантайме. */
+:root{
+  --serif:"PT Serif", Georgia, "Times New Roman", serif;
+  --mono:"PT Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --sans:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --ground:#E7EDF2; --glow:rgba(180,120,40,.08); --surface:#FFFFFF; --surface-2:#EDF2F6;
+  --ink:#152230; --ink-dim:#556673; --ink-faint:#8092a0; --line:#D6E0E8; --line-soft:#E4EBF1;
+  --accent:#B06A12; --accent-fill:#C67C1C; --accent-ink:#FFF7EC; --accent-wash:rgba(198,124,28,.12);
+  --sonar:#1E7E72; --good:#2E8B57; --bad:#B4553B;
+  --shadow:0 1px 2px rgba(20,40,60,.06), 0 8px 24px rgba(20,40,60,.06); --shadow-sm:0 1px 2px rgba(20,40,60,.05);
+  /* Шапка: белое стекло с линией цвета --line (владелец, 16.09 — светлый вариант). */
+  --bar-bg:#FFFFFF; --bar-line:#D6E0E8;
+}
+
+:root{
+  --ground:#0F1721; --glow:rgba(224,160,75,.10); --surface:#17222F; --surface-2:#1E2C3B;
+  --ink:#E8EEF4; --ink-dim:#95A6B6; --ink-faint:#66788a; --line:#26374A; --line-soft:#20303f;
+  --accent:#E7A857; --accent-fill:#E4A04B; --accent-ink:#221607; --accent-wash:rgba(228,160,75,.14);
+  --sonar:#57B4A9; --good:#61B981; --bad:#D97B5E;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.32); --shadow-sm:0 1px 2px rgba(0,0,0,.28);
+  --bar-bg:#0F1721; --bar-line:#22344A; }
+
+:root[data-theme="light"]{--ground:#E7EDF2;--glow:rgba(180,120,40,.08);--surface:#FFFFFF;--surface-2:#EDF2F6;--ink:#152230;--ink-dim:#556673;--ink-faint:#8092a0;--line:#D6E0E8;--line-soft:#E4EBF1;--accent:#B06A12;--accent-fill:#C67C1C;--accent-ink:#FFF7EC;--accent-wash:rgba(198,124,28,.12);--sonar:#1E7E72;--good:#2E8B57;--bad:#B4553B;--shadow:0 1px 2px rgba(20,40,60,.06),0 8px 24px rgba(20,40,60,.06);--shadow-sm:0 1px 2px rgba(20,40,60,.05);--bar-bg:#FFFFFF;--bar-line:#D6E0E8;}
+
+:root[data-theme="dark"]{--ground:#0F1721;--glow:rgba(224,160,75,.10);--surface:#17222F;--surface-2:#1E2C3B;--ink:#E8EEF4;--ink-dim:#95A6B6;--ink-faint:#66788a;--line:#26374A;--line-soft:#20303f;--accent:#E7A857;--accent-fill:#E4A04B;--accent-ink:#221607;--accent-wash:rgba(228,160,75,.14);--sonar:#57B4A9;--good:#61B981;--bad:#D97B5E;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.32);--shadow-sm:0 1px 2px rgba(0,0,0,.28);--bar-bg:#0F1721;--bar-line:#22344A;}
