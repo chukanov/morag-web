@@ -66,6 +66,17 @@ console.log("halo: всё зелёное");
   assert.equal(scene.period, 1.5, "остальное — из общих");
   assert.equal(scene.pattern, "random");
   assert.ok(live(scene), "заставке нужен живой перелив");
+  // 24.09: заставке — без перелива (`none`) и иногда «матрица»; доля показов прижата к 0..1
+  applyHalo({ target: "random", scene: { target: "none", shadow: false, matrix: 0.3 } });
+  assert.equal(sceneOptions().target, "none");
+  assert.equal(sceneOptions().matrix, 0.3);
+  assert.equal(haloOptions().matrix, undefined, "у знака матрицы нет");
+  applyHalo({ target: "random", scene: { matrix: 5 } });
+  assert.equal(sceneOptions().matrix, 1);
+  applyHalo({ target: "random", scene: { matrix: "a" } });
+  assert.equal(sceneOptions().matrix, undefined);
+  applyHalo({ pattern: "random", palette: "aurora", target: "random", targets: ["glyph", "glyph", "halo"], period: 1.5,
+              scene: { target: "ink", shadow: false } });
   const noShadow = withoutShadow(scene);
   assert.equal(noShadow.target, "ink", "заливка без тени остаётся заливкой");
   assert.equal(noShadow.shadow, false);

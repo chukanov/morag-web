@@ -106,6 +106,10 @@ def test_перелив_знака_доезжает_до_фронта(client):
         "target": "random", "scene": {"target": "ink", "shadow": False}}
     assert halo_payload({"halo": {"target": "random", "scene": {"shadow": "no"}}}) == {"target": "random"}
     assert halo_payload({"halo": {"target": "random", "scene": "ink"}}) == {"target": "random"}
+    assert halo_payload({"halo": {"scene": {"target": "none", "matrix": 0.3}}}) == {
+        "scene": {"target": "none", "matrix": 0.3}}, "24.09: заставка без перелива, иногда «матрица»"
+    assert halo_payload({"halo": {"scene": {"matrix": 2}}}) is None, "доля показов — не больше единицы"
+    assert halo_payload({"halo": {"scene": {"matrix": True}}}) is None
     assert halo_payload({"halo": {"period": True}}) is None, "bool — не период"
     assert halo_payload({"halo": {"pattern": "clouds", "palette": "aurora", "target": "halo", "period": 3}}) == {
         "pattern": "clouds", "palette": "aurora", "target": "halo", "period": 3.0}

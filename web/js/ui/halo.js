@@ -142,6 +142,7 @@ function fields(src) {
     pattern: src.pattern, palette: src.palette, target: src.target || "halo",
     period: Number(src.period) || 3, targets: Array.isArray(src.targets) ? src.targets : undefined,
     ...(typeof src.shadow === "boolean" ? { shadow: src.shadow } : {}),
+    ...(Number(src.matrix) > 0 ? { matrix: Math.min(1, Number(src.matrix)) } : {}),
   };
 }
 
@@ -151,7 +152,8 @@ export function haloOptions() {
 
 /** Настройки заставки темы: общие, а поверх — `theme.halo.scene` (владелец, 18.09: заставке —
  *  только цвет символов, без теней, знаку — прежний перелив). Ключ, которого в `scene` нет,
- *  берётся из общих. */
+ *  берётся из общих. Только здесь имеют смысл цель `none` (сцена своим цветом, без перелива)
+ *  и `matrix` — доля показов, в которых символы сцены на миг подменяются случайными. */
 export function sceneOptions() {
   if (!HALO) return {};
   const base = fields(HALO);
