@@ -151,6 +151,12 @@ def start(fields: dict) -> dict:
         video = Path(fields.get("video") or "").expanduser()
         checked = ingest.check_fields(video, fields.get("title") or "", fields.get("date") or "",
                                       fields.get("slides") or None)
+        # ⚠️ Рубрику спрашиваем ЗДЕСЬ, до двадцати минут расшифровки: сервер без неё запись не
+        # примет (она решает ветку и год), и узнавать об этом в самом конце — обидно.
+        # Ловилось на первой живой загрузке 24.09. Порядок проверок — от файла к полям: человек
+        # только что бросил видео, и про него он думает первым.
+        if (site_state().get("events") or []) and not (fields.get("event") or "").strip():
+            raise ingest.Step("выберите рубрику — она решает, в какую ветку и год ляжет запись")
         STATE.update({"stage": "running", "id": checked["id"], "error": "", "url": "",
                       "started": time.time(), "finished": 0.0})
         ingest.LOG.clear()
@@ -166,7 +172,7 @@ def start(fields: dict) -> dict:
                 with_stack=bool(fields.get("stack", True)), with_screen=not fields.get("no_screen"),
                 wait=True, title_auto=bool(fields.get("title_auto")))
             site, _ = ingest.load_session(None)
-            STATE.update({"stage": "done", "finished": time.time(),
+            STATE.update({"stage": "done", "finished": time.time(), "search": ingest.LAST_SEARCH,
                           "url": f"{site}/{fields.get('slug', '')}".rstrip("/")})
         except ingest.Step as error:
             STATE.update({"stage": "error", "error": str(error), "finished": time.time()})

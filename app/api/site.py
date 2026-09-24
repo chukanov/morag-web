@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 
 from hashlib import md5
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
+from ..config import engine_for
 from ..content import words
 
 router = APIRouter(prefix="/api", tags=["site"])
@@ -121,14 +123,35 @@ async def records(request: Request, slug: str | None = None) -> dict:
     # ⚠️ Список ПЛОСКИЙ и отдаётся целиком: 188 записей это 156 КБ, и фильтры на клиенте
     # работают мгновенно и без сервера. Раздел, год, метка и спикер лежат полями каждой записи —
     # фасеты фронт считает сам, второго представления тех же данных заводить не надо.
+    # Доехала ли запись до ПОИСКА. Индексация идёт плановым прогоном (с 24.09 — не на каждую
+    # загрузку), поэтому свежая или только что поправленная запись читается, но ещё не ищется.
+    # Молчать об этом нельзя: человек решит, что поиск сломан.
+    indexed_at = _indexed_at(request, corpus.slug)
     return {
         "corpus": corpus.slug,
         "count": len(corpus.index),
-        "records": [r.to_dict() for r in corpus.index.all()],
+        "records": [{**r.to_dict(), **({"indexed": r.mtime <= indexed_at} if indexed_at else {})}
+                    for r in corpus.index.all()],
         # Направление чтения: общее и по разделам. Из данных его не вывести — курс читают
         # подряд, а митапы свежими сверху, и это решение владельца, а не свойство записей.
         "reading": {"default": corpus.index.order, "sections": corpus.index.section_order},
+        "indexed_at": indexed_at,
     }
+
+
+def _indexed_at(request: Request, slug: str) -> float:
+    """Когда в последний раз собирали индекс этого пространства — из отметки планового прогона.
+
+    Нет отметки (или её не настроили) — возвращаем 0, и тогда сайт про индекс ничего не говорит:
+    обещать «не в поиске» без знания о поиске хуже, чем молчать.
+    """
+    stamp = engine_for(request.app.state.cfg, slug).index_stamp
+    if not stamp:
+        return 0.0
+    try:
+        return float(json.loads(Path(stamp).read_text(encoding="utf-8")).get("at") or 0)
+    except (OSError, ValueError, TypeError):
+        return 0.0
 
 
 @router.get("/brand/{name:path}")

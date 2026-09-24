@@ -1415,3 +1415,8 @@ body[data-view="chat"] .chat-tools{display:flex}
   font-size:13.5px;line-height:1.55;color:var(--ink-dim)}
 .ing-steps b{color:var(--ink)}
 .ing-built{color:var(--ink-faint);font-size:12.5px}
+
+/* «ждёт индексации» — спокойная пометка в строке меты карточки: запись читается, но поиск её
+   ещё не видел. Не тревога, а факт, поэтому цвет приглушённый, а не красный. */
+.rec-waiting{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--ink-faint);
+  border:1px dashed var(--line);border-radius:6px;padding:0 5px;white-space:nowrap}

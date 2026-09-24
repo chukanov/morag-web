@@ -174,3 +174,28 @@ def test_api_живо(client):
     body = client.get("/api/health").json()
     assert body["status"] == "ok"
     assert body["records"][SLUG] > 0
+
+
+def test_records_say_whether_they_reached_the_search(client, tmp_path, monkeypatch):
+    """С 24.09 индексация плановая, а не на каждую загрузку: запись читается сразу, а ищется
+    после ближайшего прогона. Список обязан это показывать — иначе «почему не находится»
+    выглядит поломкой поиска. Нет отметки о прогоне — не обещаем ничего и поля не шлём."""
+    import json as _json
+    import time as _time
+
+    from app.config import engine_for
+
+    body = client.get("/api/records").json()
+    assert all("indexed" not in r for r in body["records"]), "без отметки про индекс молчим"
+    assert body["indexed_at"] == 0
+
+    stamp = tmp_path / "indexed.json"
+    stamp.write_text(_json.dumps({"at": _time.time() - 3600}), encoding="utf-8")
+    engine_for(client.app.state.cfg, body["corpus"]).index_stamp = str(stamp)
+    body = client.get("/api/records").json()
+    assert body["indexed_at"] > 0
+    assert all(r["indexed"] is True for r in body["records"]), "прогон был позже записей"
+
+    stamp.write_text(_json.dumps({"at": 1}), encoding="utf-8")   # прогон был до всего
+    body = client.get("/api/records").json()
+    assert all(r["indexed"] is False for r in body["records"])

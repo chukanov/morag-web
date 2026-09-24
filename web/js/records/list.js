@@ -544,7 +544,16 @@ function card(record) {
     speakers.length ? el("span", { class: "dot" }) : null,
     speakers.length ? el("span", { class: "rec-people" }, ...join(speakers)) : null,
     kinds.length || tags.length ? el("span", { class: "dot" }) : null,
-    kinds.length || tags.length ? el("span", { class: "rec-topics" }, ...kinds, ...tags) : null
+    kinds.length || tags.length ? el("span", { class: "rec-topics" }, ...kinds, ...tags) : null,
+    // Запись читается сразу, а в поиск попадает плановым прогоном (решение владельца 24.09:
+    // не держать человека 20–40 минут после загрузки). Пока не попала — говорим об этом, иначе
+    // «почему её не находит» выглядит поломкой поиска. Поле приходит, только если сервер вообще
+    // знает, когда собирали индекс.
+    record.indexed === false ? el("span", { class: "dot" }) : null,
+    record.indexed === false
+      ? el("span", { class: "rec-waiting", title: "Запись уже читается; в поиске появится после ближайшей индексации" },
+          "ждёт индексации")
+      : null
   );
 
   // Слева — ОБЛОЖКА, крупно, чтобы слайд читался (владелец, 14.09): кадр титульного слайда,

@@ -98,6 +98,10 @@ class RecordMeta:
     # обязан остаться прежним. `file` — абсолютный: корней у индекса теперь может быть несколько.
     path: str = field(default="", compare=False)
     file: str = field(default="", compare=False)
+    # Когда запись в последний раз менялась — по этому же признаку решает индексатор («изменился
+    # ли документ» он смотрит по mtime). Нужен, чтобы показать в списке, доехала ли запись до
+    # поиска: с 24.09 индексация идёт плановым прогоном, а не на каждую загрузку.
+    mtime: float = field(default=0.0, compare=False)
 
     def to_dict(self) -> dict:
         return {
@@ -301,7 +305,14 @@ class RecordIndex:
         root = self._root_of(path)
         section, subgroup = self._section_of(path, root)
         cover, blurb = self._sidecars(path.parent)
+        # ⚠️ Берём максимум по тем же файлам, по которым решает индексатор: сама расшифровка и
+        # аннотации экрана (`updated_at` документа = max их mtime). Обложка и сводка живут в
+        # других сайдкарах и поиска не меняют — включать их значило бы врать «не в индексе».
+        annotations = path.parent / "record.annotations.json"
+        mtime = max(path.stat().st_mtime,
+                    annotations.stat().st_mtime if annotations.is_file() else 0.0)
         return RecordMeta(
+            mtime=mtime,
             cover=cover,
             blurb=blurb,
             id=path.parent.name,

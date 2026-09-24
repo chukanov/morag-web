@@ -304,7 +304,11 @@ async function tick() {
   const events = site.events || [];
   const sel = $("event");
   if (sel.options.length !== events.length + 1) {
-    sel.replaceChildren(new Option("— не указана —", ""), ...events.map((e) => new Option(e, e)));
+    // Заглушка видна (иначе непонятно, что поле не заполнено), но выбрать её нельзя: сервер
+    // без рубрики запись не примет — она решает ветку и год.
+    const empty = new Option("— выберите рубрику —", "");
+    empty.disabled = true;
+    sel.replaceChildren(empty, ...events.map((e) => new Option(e, e)));
   }
   if (!picked) renderRecent(s.videos || []);
 
@@ -329,7 +333,9 @@ async function tick() {
     $("work").hidden = false;
     $("form").hidden = false;
   } else if (job.stage === "done") {
-    $("ready-msg").textContent = "Расшифровка, слайды и поля уже на сайте. Голоса подписываются там же, в режиме правки.";
+    $("ready-msg").textContent = "Расшифровка, слайды и поля уже на сайте — запись читается и играет. "
+      + (job.search === "later" ? "В поиске она появится после ближайшей плановой индексации. " : "")
+      + "Голоса подписываются там же, в режиме правки.";
     $("open-record").onclick = () => { if (job.url) window.open(job.url, "_blank"); };
   }
 

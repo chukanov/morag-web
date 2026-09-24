@@ -149,7 +149,7 @@ def test_failure_is_shown_not_swallowed(server, monkeypatch):
 
     monkeypatch.setattr(ingest, "pipeline", boom)
     post(f"{base}/api/start?t=tok", {"video": str(tmp / "Downloads" / "talk.mp4"), "title": "Норм",
-                                     "date": "2026-03-12"})
+                                     "date": "2026-03-12", "event": "Доклады"})
     for _ in range(50):
         if ingest_ui.STATE["stage"] == "error":
             break
@@ -229,6 +229,16 @@ def test_own_key_stays_as_a_fallback_and_restores_the_direct_address(server, tmp
     assert text.count("OR_KEY=") == 1 and text.count("ASR_LLM_BASE_URL=") == 1
     assert ingest_ui.llm_state()["via_site"] is False
     assert post(f"{base}/api/key?t=tok", {"key": "   "})[0] == 400, "пустой ключ не принимаем"
+
+
+def test_rubric_is_asked_before_the_work_not_after(server, tmp_path):
+    """⚠️ Живой случай 24.09: расшифровка и разбор экрана прошли, а сервер отверг манифест — в нём
+    не было рубрики. Она решает ветку и год, без неё запись класть некуда; спрашиваем ДО работы."""
+    base, tmp = server
+    fields = {"video": str(tmp / "Downloads" / "talk.mp4"), "title": "Норм", "date": "2026-03-12"}
+    code, body = post(f"{base}/api/start?t=tok", fields)
+    assert code == 400 and "рубрик" in body["error"]
+    assert ingest_ui.STATE["stage"] == "idle", "работа не началась"
 
 
 def test_reset_clears_the_finished_job_but_not_a_running_one(server):
