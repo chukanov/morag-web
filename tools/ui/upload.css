@@ -73,49 +73,49 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
 .wv-who{display:inline-flex;align-items:center;gap:6px}
 .wv-who i{width:9px;height:9px;border-radius:3px;display:inline-block}
 
-/* текст: сперва печатается, потом правится на месте */
+/* текст — ГЛАВНОЕ в окне: большое поле, по нему листают назад, как по расшифровке */
 .tx-head{font:11px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.06em;
          color:var(--ink-faint);margin:0 0 6px;min-height:1.5em}
-/* Речь — серифом, как в читалке: это текст для чтения, а не служебная строка. */
-.tx-body{font:16px/1.65 var(--serif);color:var(--ink);margin:0 0 14px;min-height:5.2em;
-         max-height:9.2em;overflow:hidden;background:var(--surface-2);border-radius:10px;
-         padding:12px 14px;white-space:pre-wrap}
-/* В режиме печати читается хвост — там, где сейчас идёт работа. */
-.tx-body:not(.fixing){display:flex;flex-direction:column-reverse}
+.tx-body{font:17px/2.05 var(--serif);color:var(--ink);margin:0 0 12px;
+         height:clamp(260px,52vh,560px);overflow-y:auto;overflow-x:hidden;
+         background:var(--surface-2);border-radius:12px;padding:16px 18px}
+.tx-piece{display:inline}
 
-/* Слово под правкой: подсветка — тем же приёмом, что в караоке (переход живёт на входящем
-   состоянии, поэтому появление плавное, а снятие мгновенное). */
-.tx-hit{background:var(--accent-wash);color:var(--ink);border-radius:4px;padding:0 2px;
-        box-shadow:0 0 0 2px var(--accent-wash);transition:background .05s linear}
-.tx-hit.done{background:color-mix(in srgb,var(--good) 22%,transparent);font-weight:700}
-.tx-hit.bad{background:color-mix(in srgb,var(--bad) 18%,transparent)}
-.tx-hit.bad.shown::after{content:" ✗";color:var(--bad);font-size:.8em}
-.tx-hit.bad.gone{background:transparent;box-shadow:none;transition:background .4s,box-shadow .4s}
+/* ⚠️ ПОДСВЕТКА ОДНА на всю сцену: жёлтым отмечено то, над чем работают прямо сейчас. Разные
+   анимации на разные случаи читаются как рябь — глаз ищет правило и не находит.
+   Переход живёт на входящем состоянии (приём из караоке): появление плавное, снятие мгновенное. */
+.tx-hit{background:var(--accent-fill);color:var(--accent-ink);border-radius:5px;padding:1px 4px;
+        box-shadow:0 0 0 3px var(--accent-wash);animation:tx-pulse 1s ease-in-out infinite}
+@keyframes tx-pulse{0%,100%{box-shadow:0 0 0 3px var(--accent-wash)}
+                    50%{box-shadow:0 0 0 7px var(--accent-wash)}}
+
+/* Корректура: старое зачёркнуто и осталось, замена надписана сверху красным — как правят на
+   бумаге.
+   ⚠️ Надпись вынута ИЗ ПОТОКА (`position:absolute`), хотя разметка и `ruby`: сама ruby
+   раздвигает слово под ширину надписи, и строка расползалась дырами в полстроки
+   («очередь      :») — читать такой текст невозможно. Вынутая надпись висит над словом
+   и на перенос текста не влияет вовсе. */
+.ed{display:inline-block;position:relative}
+.ed-was{color:var(--ink-dim);text-decoration:line-through var(--bad)}
+.ed.no .ed-was{color:var(--ink);text-decoration:none}
+.ed-new{position:absolute;left:0;bottom:100%;display:block;white-space:nowrap;
+        font:600 11px/1.2 var(--mono);color:var(--bad);letter-spacing:.02em}
+.ed.no .ed-new{text-decoration:line-through;opacity:.75}
+
+/* Почему не приняли — под знаком ⓘ рядом с заменой: фраза длиннее самой правки и
+   перетягивает внимание на себя. Раскрывается там же, над текстом, пузырьком поверх строк. */
+.ed-i{appearance:none;background:none;border:0;padding:0 0 0 3px;cursor:pointer;
+      font:12px/1 var(--mono);color:var(--bad);vertical-align:baseline;text-decoration:none}
+.ed-i:hover{opacity:.75}
+.ed-i[aria-expanded=true]{color:var(--ink-dim)}
+.ed-why{display:inline-block;max-width:280px;white-space:normal;vertical-align:top;
+        font:10px/1.35 var(--mono);color:var(--ink-dim);background:var(--surface);
+        border:1px solid var(--line);border-radius:6px;padding:2px 6px;margin-left:4px;
+        box-shadow:var(--shadow-sm);text-decoration:none;position:relative;z-index:2}
+.ed-why[hidden]{display:none}
 
 /* исправления */
-.fx-ticks{display:flex;gap:2px;flex-wrap:wrap;margin:0 0 10px}
-.fx-tick{width:3px;height:9px;border-radius:2px;background:var(--surface-2);display:inline-block;
-         transition:background .2s}
-.fx-tick.kept{background:var(--ink-faint)}
-.fx-tick.changed{background:var(--good)}
-.fx-tick.failed{background:var(--bad)}
-
-.fx-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:190px;overflow:auto}
-.fx{display:flex;align-items:baseline;gap:8px;padding:5px 9px;border-radius:8px;
-    background:var(--surface-2);font-size:14px;border-left:2px solid transparent}
-.fx time{font:11px/1.4 var(--mono);color:var(--ink-faint);min-width:3.2em}
-/* ⚠️ Зачёркнуто то, чего БОЛЬШЕ НЕТ, и решает это РАЗМЕТКА (см. fixes.js): у принятой замены
-   исчезло старое слово, у отвергнутой — не состоялось предложение модели. */
-.fx-was{color:var(--ink-dim);text-decoration-color:var(--ink-faint)}
-.fx-arrow{color:var(--ink-faint)}
-/* ⚠️ Переход живёт на ВХОДЯЩЕМ состоянии (`.land`), поэтому появление плавное, а удаление
-   мгновенное — тот же приём, что у подсветки слова в караоке. Узел — слово, не буква. */
-.fx-now{opacity:0;max-width:0;overflow:hidden;white-space:nowrap;font-weight:600;color:var(--ink)}
-.fx.land .fx-now{opacity:1;max-width:22em;transition:opacity .22s ease,max-width .22s ease}
-.fx[data-ok="0"]{border-left-color:var(--bad)}
-.fx[data-ok="0"] .fx-now{color:var(--bad);text-decoration-color:var(--bad)}
-.fx-why{font:11px/1.4 var(--mono);color:var(--ink-faint);margin-left:auto;white-space:nowrap}
-.fx-count{font:12px/1.5 var(--mono);color:var(--ink-dim);margin:10px 0 0}
+.fx-count{font:12px/1.5 var(--mono);color:var(--ink-dim);margin:0}
 
 pre{margin:10px 0 0;padding:12px;background:var(--ground);border:1px solid var(--line);border-radius:9px;
     max-height:190px;overflow:auto;font:12px/1.5 var(--mono);white-space:pre-wrap;color:var(--ink-dim)}

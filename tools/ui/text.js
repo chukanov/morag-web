@@ -1,26 +1,30 @@
-// Сцена текста: то, ради чего человек и ждёт. У неё два возраста, и это ОДНА сцена намеренно —
-// сначала текст появляется, потом его правят на том же месте.
+// Сцена текста — главное в окне. Это ОДИН документ, который сначала пишется, а потом правится
+// на месте; по нему можно листать назад, как по расшифровке.
 //
 //   1) «пишется» (пасс-2): распознанный кусок печатается по мере появления. Печатаем ПО КАДРУ и
-//      пачкой знаков, а не по одному в таймере: узел один, переписывается его текст — это дёшево,
-//      в отличие от посимвольной анимации узлами, которая в этом проекте уже признана
-//      неподъёмной. Текст при этом настоящий: он ровно в этот момент и распознан.
-//   2) «правится» (финал-раунд): показывается реплика, над которой идёт работа, и слово меняется
-//      ПРЯМО В НЕЙ — подсветка, потом замена. Принятая правка остаётся в тексте, отвергнутая
-//      краснеет и исчезает, оставив исходное слово на месте.
+//      пачкой знаков, а не по знаку в таймере: узел один, переписывается его текст — это дёшево,
+//      в отличие от посимвольной анимации узлами, которая в этом проекте признана неподъёмной.
+//      Текст настоящий: он ровно в этот момент и распознан, мы лишь показываем его со скоростью
+//      чтения.
+//   2) «правится» (финал-раунд): слово подсвечивается ТЕМ ЖЕ единственным способом, что и всегда,
+//      а потом остаётся в тексте КОРРЕКТУРОЙ — зачёркнутое, с надписанной сверху заменой. Как
+//      правят на бумаге: видно и что было, и что предложено, и почему не приняли.
 //
-// ⚠️ Правки приходят пачками (шесть реплик считаются разом), поэтому у сцены СВОЙ темп: замена
-// показывается не быстрее, чем её можно прочитать. Отстали — ускоряемся, но не мгновенно.
+// ⚠️ Подсветка ОДНА на всю сцену. Разные анимации на разные случаи читаются как рябь: глаз ищет
+// правило и не находит. Правило здесь простое — жёлтым отмечено то, над чем работают ПРЯМО СЕЙЧАС.
+// ⚠️ Правки приходят пачками (шесть реплик считаются разом), поэтому у сцены свой темп: замена
+// показывается не быстрее, чем её можно прочитать.
+// ⚠️ Прокрутка — МГНОВЕННАЯ. Плавная в браузере владельца не работает вовсе (замерено 08.09), и
+// показ, зависящий от неё, просто стоял бы на месте.
 
 import { clock, el, reduced } from "./dom.js";
 
 const TYPE_MS = 900;       // за столько печатается кусок, если не торопимся
-const FIX_HOLD = 420;      // сколько слово подсвечено до замены — время заметить глазом
-const FIX_GAP = 260;       // пауза между правками
-const KEEP_CHARS = 1400;   // сколько текста держим на экране в режиме «пишется»
-const KEEP_CARDS = 30;
+const HOLD_MS = 460;       // сколько слово подсвечено до замены — время заметить глазом
+const GAP_MS = 240;        // пауза между правками
+const HELD_MS = 4000;      // человек листает сам — столько за ним не бежим
 
-const WHY = {
+export const WHY = {
   empty: "пусто или ничего не меняет",
   too_long: "слишком длинная — это уже не сущность",
   not_found: "в тексте нет по границам слова",
@@ -32,120 +36,210 @@ const WHY = {
 };
 
 /** Границы слова — как у движка: замена внутри слова это не сущность, а порча. */
-function wordRe(word) {
-  return new RegExp(`(?<![\\w])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w])`);
+export function wordRe(word) {
+  return new RegExp(`(?<![\\w])${String(word).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w])`);
 }
 
 export function textScene(root) {
   const head = el("p", { class: "tx-head" });
-  const body = el("p", { class: "tx-body" });
-  const list = el("ul", { class: "fx-list" });
-  const ticks = el("div", { class: "fx-ticks" });
+  const body = el("div", { class: "tx-body" });
   const count = el("p", { class: "fx-count" });
-  root.append(head, body, ticks, list, count);
+  root.append(head, body, count);
 
-  let mode = "idle";          // idle | writing | fixing
-  let plain = "";             // что уже показано (режим «пишется»)
-  let pending = "";           // что ещё печатается
+  let mode = "idle";
+  let pending = "";          // что печатается сейчас
   let typed = 0;
-  let applied = 0, dropped = 0, turns = 0, built = 0;
-  const jobs = [];            // очередь правок этой сцены
-  let busy = 0;               // до какого момента занята (мс)
+  let marks = [];            // узлы уже поставленной корректуры — их не трогаем
+  let tail = null;           // текстовый узел, в который печатаем
+  let anchors = [];          // [[секунда, узел]] — куда листать по времени реплики
+  let applied = 0, dropped = 0, turns = 0;
+  const jobs = [];
+  let busy = 0;
   let raf = null;
+  let heldUntil = 0;
 
-  function pump() {
-    if (raf === null) raf = requestAnimationFrame(tick);
+  // ⚠️⚠️ «Человек листает сам» берём из ЕГО ЖЕСТОВ, а не из события `scroll`. Событие поднимает
+  // и наша собственная прокрутка, и сам браузер — подстановка корректуры меняет высоту строки
+  // (надпись над ней), и он подтягивает scrollTop сам. Пока признаком считался `scroll`,
+  // слежение выключалось САМО себя после первой же замены, и корректура ложилась за краем окна
+  // (замерено на стенде: 2 корректуры в тексте, ни одной в видимой части). Тот же приём, что
+  // в читалке сайта (`web/js/records/reader.js`), и по той же причине.
+  for (const type of ["wheel", "touchmove", "keydown"]) {
+    body.addEventListener(type, () => { heldUntil = performance.now() + HELD_MS; }, { passive: true });
   }
 
-  function renderPlain() {
-    body.replaceChildren(plain.slice(-KEEP_CHARS) + (pending ? pending.slice(0, typed) : ""));
+  function pump() { if (raf === null) raf = requestAnimationFrame(tick); }
+
+  /** Смещение узла ВНУТРИ окна текста.
+   *
+   * ⚠️ Меряем ПРЯМОУГОЛЬНИКАМИ, а не `offsetTop`: тот считается от ближайшего
+   * позиционированного предка, а окно текста позиционировано не всегда — тогда к смещению
+   * приплюсовывалась вся шапка страницы, прокрутка улетала в конец и корректура оставалась за
+   * кадром. Разница прямоугольников не зависит от вёрстки вокруг; `offsetTop` остаётся запасным
+   * путём для узлов без геометрии (тесты).
+   */
+  function offsetIn(node) {
+    if (typeof node.getBoundingClientRect !== "function"
+        || typeof body.getBoundingClientRect !== "function") return node.offsetTop || 0;
+    return node.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
+  }
+
+  function follow(node) {
+    // ⚠️ Без behavior:"smooth" — см. шапку файла.
+    if (!node || performance.now() < heldUntil) return;
+    body.scrollTop = Math.max(0, offsetIn(node) - body.clientHeight * 0.45);
+  }
+
+  /** Темп показа правок.
+   *
+   * ⚠️ Финал-раунд считает реплики ПАЧКАМИ (шесть разом), и при ровном темпе очередь
+   * растёт, а окно показывает то, что было минуту назад. Окно показывает работу СЕЙЧАС — значит,
+   * чем длиннее очередь, тем короче пауза; при пустой очереди замена показана не быстрее,
+   * чем её можно прочитать.
+   */
+  function pace(queued) {
+    const k = queued > 24 ? 0.25 : queued > 8 ? 0.5 : 1;
+    return { hold: Math.round(HOLD_MS * k), gap: Math.round(GAP_MS * k) };
   }
 
   function tick(now) {
     raf = null;
     let more = false;
-
     if (pending) {
-      const step = reduced() ? pending.length : Math.max(1, Math.ceil(pending.length / (TYPE_MS / 16)));
+      const step = reduced() ? pending.length
+                             : Math.max(1, Math.ceil(pending.length / (TYPE_MS / 16)));
       typed = Math.min(pending.length, typed + step);
-      renderPlain();
-      if (typed >= pending.length) { plain += pending; pending = ""; typed = 0; }
+      if (tail) tail.textContent = pending.slice(0, typed);
+      if (typed >= pending.length) { pending = ""; typed = 0; tail = null; }
       else more = true;
+      follow(body.lastElementChild);
     }
-
-    if (jobs.length && now >= busy) {
-      runFix(jobs.shift(), now);
-      more = true;
-    }
+    if (jobs.length && now >= busy) { runFix(jobs.shift(), now); more = true; }
     if (jobs.length) more = true;
     if (more) pump();
   }
 
-  // --- режим «правится» -------------------------------------------------------------------
+  // --- текст пишется ---------------------------------------------------------------------
 
-  function showTurn(e) {
-    mode = "fixing";
-    head.textContent = `реплика ${clock(e.start)}${e.whole ? "" : " · кусок"}`;
-    body.replaceChildren(e.text || "");
-    body.className = "tx-body fixing";
+  function append(sec, raw) {
+    // ⚠️ Прежний кусок дописываем ЦЕЛИКОМ, а не по напечатанному: иначе при быстром потоке
+    // (или перемотке на стенде) каждый новый кусок обрезал бы предыдущий на полуслове, и от
+    // текста оставались бы огрызки. Печать — это скорость показа, а не содержимое.
+    finishTyping();
+    const piece = el("span", { class: "tx-piece" });
+    body.append(piece);
+    anchors.push([sec, piece]);
+    tail = piece;
+    pending = (raw || "").trim() + " ";
+    typed = 0;
+    pump();
+  }
+
+  // --- текст правится --------------------------------------------------------------------
+
+  /** Узел, ближе всего стоящий к этой секунде записи: по нему ищем слово и туда листаем. */
+  function near(sec) {
+    let best = null;
+    for (const [at, node] of anchors) {
+      if (at <= sec + 1) best = node;
+      else break;
+    }
+    return best;
+  }
+
+  /** Найти слово в тексте: сначала рядом с репликой, потом где угодно. */
+  function locate(word) {
+    const re = wordRe(word);
+    const pieces = [...body.children].filter((n) => n.classList.contains("tx-piece"));
+    const from = near(current);
+    const order = from ? [from, ...pieces.filter((p) => p !== from)] : pieces;
+    for (const piece of order) {
+      for (const node of [...piece.childNodes]) {
+        if (node.nodeType !== 3) continue;                   // текстовые узлы; корректуру не трогаем
+        const hit = re.exec(node.textContent);
+        if (hit) return { node, index: hit.index, word: hit[0], piece };
+      }
+    }
+    return null;
+  }
+
+  let current = 0;
+
+  function finishTyping() {
+    // ⚠️ Правка ищет слово в готовом тексте. Если в этот момент что-то ещё печатается, слово может
+    // быть «ещё не напечатано» — и правка молча не найдёт его. Дописываем немедленно: текст и так
+    // весь пришёл, печать — только скорость показа.
+    if (!pending) return;
+    if (tail) tail.textContent = pending;
+    pending = ""; typed = 0; tail = null;
   }
 
   function runFix(e, now) {
+    finishTyping();
     const ok = e.ok === true;
-    card(e, ok);
-    const re = wordRe(e.was || "");
-    const text = body.textContent;
-    const hit = re.exec(text);
-    if (!hit) {                       // замена вне показанного куска — честно только карточкой
-      busy = now + FIX_GAP;
-      return;
-    }
-    const mark = el("mark", { class: ok ? "tx-hit" : "tx-hit bad", text: hit[0] });
-    body.replaceChildren(text.slice(0, hit.index), mark, text.slice(hit.index + hit[0].length));
-    busy = now + FIX_HOLD + FIX_GAP;
-
-    const swap = () => {
-      if (ok) {
-        // Принято — слово стало другим ПРЯМО В ТЕКСТЕ и таким и остаётся.
-        mark.textContent = e.now;
-        mark.className = "tx-hit done";
-        setTimeout(() => {
-          const t = body.textContent;                     // рассыпаем разметку обратно в текст
-          body.replaceChildren(t);
-        }, 600);
-      } else {
-        // Отвергнуто — старое слово ОСТАЁТСЯ. Показываем это: краснеет и гаснет.
-        mark.className = "tx-hit bad shown";
-        setTimeout(() => { mark.className = "tx-hit bad gone"; }, 700);
-        setTimeout(() => { body.replaceChildren(body.textContent); }, 1100);
-      }
-    };
-    if (reduced()) swap(); else setTimeout(swap, FIX_HOLD);
-  }
-
-  function card(e, ok) {
-    const item = el("li", { class: "fx" },
-      el("time", { text: clock(e.start) }),
-      el(ok ? "s" : "span", { class: "fx-was", text: e.was }),
-      el("span", { class: "fx-arrow", text: "→" }),
-      el(ok ? "b" : "s", { class: "fx-now", text: e.now }));
-    item.setAttribute("data-ok", ok ? "1" : "0");
-    if (!ok) {
-      const why = WHY[e.why] || e.why || "не принято";
-      item.append(el("span", { class: "fx-why", text: e.term ? `${why} «${e.term}»` : why }));
-    }
-    list.prepend(item);
-    while (list.children.length > KEEP_CARDS) list.lastElementChild.remove();
-    requestAnimationFrame(() => item.classList.add("land"));
     if (ok) applied += 1; else dropped += 1;
     summary();
+    const { hold, gap } = pace(jobs.length);
+    const spot = locate(e.was || "");
+    if (!spot) { busy = now + gap; return; }                   // вне показанного — честно молчим
+
+    // Разрезаем текстовый узел и ставим на слово ОДНУ подсветку — ту же, что и всегда.
+    const rest = spot.node.splitText(spot.index);
+    const after = rest.splitText(spot.word.length);
+    const mark = el("span", { class: "tx-hit", text: spot.word });
+    rest.replaceWith(mark);
+    void after;
+    follow(mark);                                             // листаем к СЛОВУ, а не к куску: кусок бывает выше окна
+    busy = now + hold + gap;
+
+    const land = () => {
+      // Корректура: старое зачёркнуто и ОСТАЁТСЯ, замена надписана сверху красным. `ruby` для этого
+      // и существует: надпись живёт над строкой и не ломает перенос текста.
+      // ⚠️ Нет фразы — нет и знака: пустой (i) обещал бы объяснение, которого нет.
+      const note = ok ? "" : [WHY[e.why] || e.why || "",
+                              e.term ? `«${e.term}»` : ""].filter(Boolean).join(" ");
+      const fix = el("ruby", { class: ok ? "ed" : "ed no" },
+        el(ok ? "s" : "span", { class: "ed-was", text: spot.word }),
+        el("rt", { class: "ed-new" }, e.now, note ? reason(note) : null));
+      mark.replaceWith(fix);
+      marks.push(fix);
+    };
+    if (reduced()) land(); else setTimeout(land, hold);
   }
 
-  function ensureTicks(n) {
-    // ⚠️ Полоска реплик строится ОДИН раз: пересборка узлов сбрасывала бы переходы.
-    if (n <= built) return;
-    for (let i = built; i < n; i++) ticks.append(el("i", { class: "fx-tick" }));
-    built = n;
+  /** Почему не приняли — под знаком (i) рядом с красной заменой.
+   *
+   * ⚠️ Причина — СПРАВКА, а не часть текста (решение владельца 24.09). Развёрнутой фразой
+   * («меняет число — его решает акустика») она длиннее самой правки и перетягивает внимание на
+   * себя. Раскрывается ТАМ ЖЕ, над текстом: объяснение должно стоять рядом с тем, что
+   * объясняет, а не в отдельном углу экрана.
+   */
+  /** Пузырёк справки — внутрь окна. Он висит над словом, а слово бывает у самого края:
+   * без сдвига фраза уезжала бы за границу (у окна `overflow-x:hidden`) и обрезалась молча. */
+  function fit(node) {
+    if (typeof node.getBoundingClientRect !== "function") return;
+    node.style.marginLeft = "4px";
+    const over = node.getBoundingClientRect().right - (body.getBoundingClientRect().right - 10);
+    if (over > 0) node.style.marginLeft = `${4 - over}px`;
+  }
+
+  function reason(note) {
+    const why = el("span", { class: "ed-why", hidden: "", text: note });
+    let open = false;
+    const btn = el("button", {
+      // Знак — ОДИН символ-пиктограмма (владелец), а не буква в нарисованном кружке.
+      class: "ed-i", type: "button", title: "почему не приняли", "aria-expanded": "false",
+      text: "ⓘ",
+      onclick: () => {
+        open = !open;
+        if (open) why.removeAttribute("hidden"); else why.setAttribute("hidden", "");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+        // Спросили причину — значит читают здесь; увозить показ дальше нельзя.
+        heldUntil = performance.now() + HELD_MS;
+        if (open) fit(why);
+      },
+    });
+    return [btn, why];
   }
 
   function summary() {
@@ -156,48 +250,37 @@ export function textScene(root) {
   return {
     apply(e) {
       if (e.t === "stage.start" && e.stage === "pass2") {
-        root.removeAttribute("hidden");   // сцена открывается уже на распознавании, не на правках
+        root.removeAttribute("hidden");
         mode = "writing";
         head.textContent = "распознаю — текст появляется по мере готовности";
-        body.className = "tx-body";
         return;
       }
-      if (e.t === "chunk.done" && mode === "writing" && e.raw) {
-        // Текст ставим в очередь целиком, а печатаем по кадрам: событие пришло одно, а читается
-        // оно секунду — это и есть «по мере появления», без выдумок.
-        plain += pending.slice(0, typed);
-        pending = (pending.slice(typed) + " " + e.raw).trim() + " ";
-        typed = 0;
-        pump();
-        return;
-      }
+      if (e.t === "chunk.start") { current = e.from || current; return; }
+      if (e.t === "chunk.done" && mode === "writing" && e.raw) { append(current, e.raw); return; }
       if (e.t === "stage.start" && e.stage === "final-round") {
         root.removeAttribute("hidden");
-        head.textContent = "правлю сущности";
-        plain = pending = ""; typed = 0;
+        mode = "fixing";
+        head.textContent = "правлю сущности — зачёркнуто то, что было; сверху красным — замена";
         return;
       }
-      if (e.t === "turn.text") { showTurn(e); return; }
-      if (e.t === "turn.fix") { jobs.push(e); pump(); return; }
-      if (e.t === "turn.done") {
-        turns = e.n || turns;
-        ensureTicks(turns);
-        const tick_ = ticks.children[Math.max(0, e.turn || 0)];
-        if (tick_) {
-          tick_.className = "fx-tick " + (e.failed ? "failed" : e.changed ? "changed" : "kept");
-          tick_.title = `${clock(e.start)} — ${e.failed ? "не долечилась" : e.changed ? "правлена" : "без правок"}`;
-        }
-        summary();
+      if (e.t === "turn.text") {
+        current = e.start || 0;
+        // Текста ещё нет (окно открыли на середине прогона) — показываем хотя бы эту реплику.
+        if (!body.children.length) append(current, e.text || "");
+        else follow(near(current));
+        return;
       }
+      if (e.t === "turn.fix") { jobs.push(e); pump(); return; }
+      if (e.t === "turn.done") { turns = e.n || turns; summary(); }
     },
     reset() {
-      mode = "idle"; plain = pending = ""; typed = 0; jobs.length = 0; busy = 0;
-      applied = dropped = turns = built = 0;
-      head.textContent = ""; body.replaceChildren(); list.replaceChildren();
-      ticks.replaceChildren(); count.textContent = "";
+      mode = "idle"; pending = ""; typed = 0; tail = null; jobs.length = 0; busy = 0;
+      applied = dropped = turns = current = 0;
+      marks = []; anchors = [];
+      head.textContent = ""; body.replaceChildren(); count.textContent = "";
       root.setAttribute("hidden", "");
     },
-    state: () => ({ mode, applied, dropped, turns, cards: list.children.length,
-                    text: body.textContent, queued: jobs.length }),
+    state: () => ({ mode, applied, dropped, turns, text: body.textContent,
+                    edits: marks.length, queued: jobs.length }),
   };
 }

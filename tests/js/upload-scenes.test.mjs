@@ -17,6 +17,12 @@ class El {
     this.kids = [];
     this.attrs = {};
     this.style = { setProperty() {} };
+    // Минимальная геометрия: сцена листает окно текста, и проверяется именно то, что она
+    // листает (сколько раз), а не куда: раскладки в заглушке нет и быть не может.
+    this.clientHeight = 200;
+    this.scrolls = 0;
+    this._scroll = 0;
+    this._on = {};
     this.classList = {
       _s: new Set(),
       add: (c) => this.classList._s.add(c),
@@ -26,17 +32,29 @@ class El {
     };
   }
   set className(v) { for (const c of String(v).split(/\s+/).filter(Boolean)) this.classList._s.add(c); }
-  set textContent(v) { this.kids = [String(v)]; }
+  set textContent(v) { const t = new TextNode(v); t.parentElement = this; this.kids = [t]; }
   get textContent() { return this.kids.map((k) => (typeof k === "string" ? k : k.textContent)).join(""); }
   get children() { return this.kids.filter((k) => k instanceof El); }
+  get childNodes() { return this.kids; }
+  get lastElementChild_() { return this.children.at(-1) || null; }
   get lastElementChild() { return this.children.at(-1) || null; }
   setAttribute(k, v) { this.attrs[k] = v; }
   removeAttribute(k) { delete this.attrs[k]; }
-  addEventListener() {}
+  addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); }
+  getBoundingClientRect() { return { top: this._top || 0, left: 0 }; }
+  get scrollTop() { return this._scroll; }
+  // ⚠️ Событие шлётся СИНХРОННО — строже, чем в браузере (там оно придёт перед кадром):
+  // проверка «это не я прокрутил» не имеет права зависеть от момента доставки.
+  set scrollTop(v) {
+    this._scroll = Number.isFinite(v) ? v : 0;
+    this.scrolls += 1;
+    for (const fn of this._on.scroll || []) fn({ target: this });
+  }
   append(...kids) {
     for (const k of kids.flat()) {
       if (k == null) continue;
-      if (k instanceof El) k.parentElement = this;
+      if (typeof k === "string") { this.kids.push(new TextNode(k)); this.kids.at(-1).parentElement = this; continue; }
+      k.parentElement = this;
       this.kids.push(k);
     }
   }
@@ -49,13 +67,39 @@ class El {
     if (p) p.kids = p.kids.filter((k) => k !== this);
     this.parentElement = null;
   }
+  replaceWith(node) {
+    const p = this.parentElement;
+    if (!p) return;
+    p.kids[p.kids.indexOf(this)] = node;
+    node.parentElement = p;
+    this.parentElement = null;
+  }
   getContext() { return null; }
+}
+
+// ⚠️ Правка идёт ВНУТРИ текста, значит заглушке нужны настоящие текстовые узлы с `splitText`:
+// на строках это не проверить, и сцена бы «работала» в тесте, ничего не меняя на экране.
+class TextNode {
+  constructor(t) { this.nodeType = 3; this.textContent = String(t); this.parentElement = null; }
+  splitText(i) {
+    const rest = new TextNode(this.textContent.slice(i));
+    this.textContent = this.textContent.slice(0, i);
+    const p = this.parentElement;
+    if (p) { p.kids.splice(p.kids.indexOf(this) + 1, 0, rest); rest.parentElement = p; }
+    return rest;
+  }
+  replaceWith(node) {
+    const p = this.parentElement;
+    if (!p) return;
+    p.kids[p.kids.indexOf(this)] = node;
+    node.parentElement = p;
+  }
 }
 
 globalThis.document = {
   createElement: (t) => new El(t),
-  createTextNode: (t) => String(t),
-  documentElement: new El("html"),
+  createTextNode: (t) => new TextNode(t),
+  documentElement: { getAttribute: () => "dark" },
 };
 globalThis.matchMedia = () => ({ matches: false });
 globalThis.window = globalThis;
@@ -146,50 +190,72 @@ const { textScene } = await import(join(repo, "tools/ui/text.js"));
                 why: "breaks_term", term: "Мария Ковалёва" });
   flush();
 
-  // ⚠️ Принятая замена осталась В ТЕКСТЕ, отвергнутые — нет: старое слово никуда не делось.
-  assert.match(scene.state().text, /Airflow/, "принятое слово заменено прямо в реплике");
-  assert.ok(!/эйр флоу/.test(scene.state().text), "старого слова в тексте больше нет");
-  assert.match(scene.state().text, /H200/, "отвергнутая замена текст не трогает");
-  assert.match(scene.state().text, /Ковалёв/);
+  // ⚠️ Правка остаётся в тексте КОРРЕКТУРОЙ: старое слово никуда не девается (оно зачёркнуто),
+  // а замена надписана сверху. Так видно и что было, и что предложили, и почему не приняли.
+  const shown = scene.state().text;
+  assert.match(shown, /эйр флоу/, "старое слово остаётся — его зачёркивают, а не стирают");
+  assert.match(shown, /Airflow/, "замена надписана над ним");
+  assert.match(shown, /H200/, "отвергнутая замена исходное слово не трогает");
+  assert.equal(scene.state().edits, 3, "все три правки легли в текст");
 
-  const list = root.children.find((k) => k.classList.contains("fx-list"));
-  const cards = list.children;
-  assert.equal(cards.length, 3);
-  // Порядок — по завершению: последняя пришедшая сверху. У каждой карточки тайм-код, иначе
-  // человек решит, что запись обрабатывают задом наперёд.
-  assert.match(cards[0].textContent, /0:30/);
-  assert.equal(cards[0].attrs["data-ok"], "0");
-  assert.match(cards[0].textContent, /сломало бы известный термин «Мария Ковалёва»/);
-  assert.match(cards[1].textContent, /меняет число/);
-  assert.equal(cards[2].attrs["data-ok"], "1");
-  assert.ok(!/why/.test(cards[2].textContent), "у принятой замены причины нет");
+  const all = [];
+  (function walk(node) {
+    for (const kid of node.kids || []) if (kid instanceof El) { all.push(kid); walk(kid); }
+  })(root);
+  const ruby = all.filter((n) => n.tagName === "RUBY");
+  assert.equal(ruby.length, 3, "каждая правка — своя корректура");
+  assert.ok(ruby.some((r) => r.classList.contains("no")), "отвергнутые помечены отдельно");
 
-  const st = scene.state();
-  assert.equal(st.applied, 1);
-  assert.equal(st.dropped, 2);
-  assert.equal(st.cards, 3);
+  // ⚠️ Причина лежит под знаком ⓘ и НЕ показана, пока её не спросили: развёрнутая
+  // фраза длиннее самой правки и перетягивает внимание. У принятой правки знака нет вовсе —
+  // объяснять нечего.
+  const eyes = all.filter((n) => n.classList.contains("ed-i"));
+  const whys = all.filter((n) => n.classList.contains("ed-why"));
+  assert.equal(eyes.length, 2, "знак только там, где есть что сказать");
+  assert.equal(eyes[0].textContent, "ⓘ", "и это ОДИН символ-пиктограмма");
+  assert.equal(whys.length, 2);
+  assert.ok(whys.every((w) => "hidden" in w.attrs), "пока не спросили — фразы не видно");
+  assert.match(whys.map((w) => w.textContent).join(" "), /меняет число/);
+  assert.match(whys.map((w) => w.textContent).join(" "), /сломало бы известный термин.*Мария Ковалёва/,
+               "и какой именно термин сломался бы — там же, а не в строке");
+  for (const fn of eyes[0]._on.click || []) fn({});
+  assert.ok(!("hidden" in whys[0].attrs), "нажали — фраза появилась");
+  assert.equal(eyes[0].attrs["aria-expanded"], "true");
+  for (const fn of eyes[0]._on.click || []) fn({});
+  assert.ok("hidden" in whys[0].attrs, "нажали ещё раз — убралась");
 
-  // Полоска реплик строится ОДИН раз и дальше только перекрашивается.
   scene.apply({ t: "turn.done", turn: 0, start: 61, n: 5, changed: true });
-  const ticks = root.children.find((k) => k.classList.contains("fx-ticks"));
-  assert.equal(ticks.children.length, 5);
-  assert.ok(ticks.children[0].classList.contains("changed"));
-  scene.apply({ t: "turn.done", turn: 1, start: 150, n: 5, changed: false });
-  assert.equal(ticks.children.length, 5, "второе событие узлов не добавляет");
-  assert.ok(ticks.children[1].classList.contains("kept"));
+  assert.equal(scene.state().turns, 5);
 }
 {
-  // Список не лог: старое уезжает, иначе за девять минут накопится четыре сотни узлов.
+  // ⚠️ Слежение за правкой не должно выключаться НАШЕЙ же прокруткой. `scrollTop = …`
+  // поднимает событие `scroll`, и пока сцена считала его человеческим, она после первой же замены
+  // замирала на четыре секунды, и корректура ложилась за краем окна — человек не видел ни одной.
   const root = new El("div");
   const scene = textScene(root);
-  for (let i = 0; i < 60; i++) {
-    scene.apply({ t: "turn.fix", turn: i, start: i, was: "а", now: "б", ok: true, why: "" });
-  }
-  flush(80);
-  assert.ok(scene.state().cards <= 30, `карточек ${scene.state().cards}`);
-  assert.equal(scene.state().applied, 60, "счётчик считает ВСЕ, а не видимые");
-}
+  scene.apply({ t: "stage.start", stage: "final-round" });
+  scene.apply({ t: "turn.text", turn: 0, start: 10,
+                text: "Мы берём эйр флоу, а в очереди кафка." });
+  const body = root.children[1];
+  const before = body.scrolls;
+  scene.apply({ t: "turn.fix", turn: 0, start: 10, was: "эйр флоу", now: "Airflow", ok: true });
+  flush();
+  const one = body.scrolls;
+  scene.apply({ t: "turn.fix", turn: 0, start: 10, was: "кафка", now: "Kafka", ok: true });
+  flush();
+  assert.ok(one > before, "к первой правке сцена листает");
+  assert.ok(body.scrolls > one, "и ко второй тоже — своя прокрутка слежение не выключает");
+  assert.equal(scene.state().edits, 2, "и обе правки легли в текст");
 
+  // А вот НАСТОЯЩИЙ жест человека слежение останавливает: он читает своё место, и увозить
+  // его оттуда нельзя.
+  const two = body.scrolls;
+  for (const fn of body._on.wheel || []) fn({});
+  scene.apply({ t: "turn.fix", turn: 0, start: 10, was: "очереди", now: "очередь", ok: false, why: "empty" });
+  flush();
+  assert.equal(body.scrolls, two, "после жеста человека сцена за ним не бегит");
+  assert.equal(scene.state().edits, 3, "но правку в текст всё равно ставит");
+}
 {
   // Текст печатается ПО МЕРЕ появления: событие пришло одно, а читается оно кадрами.
   const root = new El("div");

@@ -16,6 +16,10 @@ import { el, reduced } from "./dom.js";
 
 const REVEAL_MS = 600;        // проявление ленты голосов: одно движение, не мигание
 const HUES = 8;               // больше восьми оттенков глазом не различаются — дальше светлота
+// С какого тона начинается развёртка голосов. Синий — решение владельца (24.09): первый голос
+// виден чаще всех и задаёт впечатление от сцены. Значение — тон акцентного синего сайта
+// (#3F7FB5 ≈ oklch 246°), чтобы окно читалось продолжением сайта.
+const BLUE = 246;
 
 export function wave(root) {
   const canvas = el("canvas", { class: "wv-c" });
@@ -34,13 +38,19 @@ export function wave(root) {
 
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-  /** Цвет голоса: поворот тона акцента. `color-mix`/`oklch` умеет сам браузер — считать нечего. */
-  function colour(idx, alpha = 1) {
-    const base = css("--accent-fill") || "#E4A04B";
-    if (idx === 0) return alpha === 1 ? base : `color-mix(in srgb, ${base} ${alpha * 100}%, transparent)`;
-    const turn = (idx % HUES) / HUES;
-    const step = idx >= HUES ? 1 - 0.18 * Math.floor(idx / HUES) : 1;
-    return `oklch(from ${base} calc(l * ${step}) c calc(h + ${turn * 360}))`;
+  /** Цвет голоса: ЯРКИЙ, а не приглушённый оттенок акцента.
+   *
+   * ⚠️ Сначала цвета выводились из акцента поворотом тона — и получались блёклыми: у брендового
+   * цвета низкая насыщенность, она и наследовалась. Здесь картинка, а не текст: голоса должны
+   * различаться с одного взгляда, поэтому насыщенность задаётся прямо, а от темы берётся только
+   * светлота (на светлом фоне те же цвета надо темнее, иначе они выцветают).
+   */
+  function colour(idx) {
+    const light = document.documentElement.getAttribute("data-theme") === "light";
+    const L = light ? 0.58 : 0.74;
+    const hue = (idx * 360) / HUES + BLUE;        // старт от синего — см. BLUE
+    const dim = idx >= HUES ? 1 - 0.16 * Math.floor(idx / HUES) : 1;
+    return `oklch(${(L * dim).toFixed(3)} 0.19 ${hue % 360})`;
   }
 
   function fit() {
