@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import subprocess
+import sys
 import threading
 import time
 import webbrowser
@@ -162,6 +164,32 @@ def gateway_from_mirror() -> str:
     return ""
 
 
+def choose() -> dict:
+    """Системный диалог выбора файла — единственный способ узнать ПУТЬ из браузера.
+
+    ⚠️ `<input type=file>` здесь бесполезен: браузер отдаёт содержимое и имя, но НЕ путь, а
+    конвейеру нужен файл на диске. Диалог показывает СЕРВЕР (он и так на этой машине) —
+    `osascript`, штатный выбор файла macOS.
+    """
+    if sys.platform != "darwin":
+        raise upload.Step("системный диалог есть только на macOS — вставьте путь в поле")
+    # ⚠️ `tell me to activate`, а НЕ через "System Events": обращение к чужому приложению
+    # macOS спрашивает отдельным разрешением на автоматизацию, и без него диалог не откроется вовсе.
+    script = ('tell me to activate\n'
+              'set f to choose file with prompt "Выберите видеозапись" of type {"public.movie"}\n'
+              'POSIX path of f')
+    try:
+        done = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise upload.Step(f"диалог не открылся: {error}") from error
+    if done.returncode != 0:
+        # Отказ человека — не ошибка: страница просто остаётся как была.
+        if "-128" in done.stderr or "canceled" in done.stderr.lower():
+            return {"cancelled": True}
+        raise upload.Step(done.stderr.strip()[:200] or "диалог не вернул файл")
+    return by_path(done.stdout.strip())
+
+
 def by_path(raw: str) -> dict:
     """Файл по ПУТИ, вписанному руками или брошенному в поле.
 
@@ -179,7 +207,22 @@ def by_path(raw: str) -> dict:
     path = Path(raw).expanduser()
     if not path.is_absolute():
         raise upload.Step("нужен полный путь, от корня")
-    if not path.is_file():
+    # ⚠️ «Нет файла» и «не дают смотреть» — разные беды, а `is_file()` обе отдаёт как False. macOS
+    # закрывает Загрузки, Рабочий стол и Документы от программ, которым человек этого не разрешал,
+    # и тогда совет «проверьте путь» уводит совсем не туда.
+    try:
+        ok = path.is_file()
+    except PermissionError:
+        ok = False
+    if not ok:
+        try:
+            path.stat()
+        except PermissionError:
+            raise upload.Step(
+                f"macOS не даёт читать {path.parent} — разрешите доступ тому, откуда запущено "
+                f"приложение (Настройки → Конфиденциальность → Файлы и папки), либо положите видео в другую папку") from None
+        except FileNotFoundError:
+            pass
         raise upload.Step(f"нет такого файла: {path}")
     if path.suffix.lower().lstrip(".") not in upload.VIDEO_EXT:
         raise upload.Step(f"не видео: нужен {', '.join(sorted(upload.VIDEO_EXT))}")
@@ -337,6 +380,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._json({"ok": True, "llm": upload.use_site_llm()})
                 except upload.Step as error:
                     self._json({"ok": True, "llm": {"via_site": False, "error": str(error)}})
+                return
+            if url.path == "/api/pick":
+                self._json(choose())
                 return
             if url.path == "/api/file":
                 self._json(by_path(str(body.get("path") or "")))

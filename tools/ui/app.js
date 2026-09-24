@@ -149,7 +149,7 @@ function resetDrop() {
   }));
   drop.replaceChildren(
     el("p", { class: "big", text: "Перетащите сюда запись" }),
-    el("p", { class: "hint", text: "можно из недавних файлов ниже · mp4, mov, webm, mkv" }),
+    el("p", { class: "hint", text: "или нажмите, чтобы выбрать · mp4, mov, webm, mkv" }),
     field);
   id("fields").hidden = true;
   id("recent").hidden = false;
@@ -194,7 +194,24 @@ drop.addEventListener("drop", (ev) => {
   id("msg").textContent = `«${f.name}» не из Загрузок, Рабочего стола или Movies — браузер путь не сообщает. `
     + `Вставьте полный путь в поле (в Finder — Alt+Cmd+C копирует его).`;
 });
-drop.addEventListener("click", () => { if (!picked && videos.length) id("recent").scrollIntoView({block: "nearest"}); });
+/** Нажали на окошко — системный диалог выбора файла. Его показывает НАШ сервер на этой же
+ * машине: только так браузерная страница может узнать ПУТЬ (`<input type=file>` даёт содержимое
+ * и имя, но не путь, а конвейеру нужен файл на диске). */
+async function openDialog() {
+  id("msg").textContent = "выбор файла…";
+  try {
+    const r = await api("/api/pick", {});
+    id("msg").textContent = "";
+    if (!r.cancelled) pick(r);
+  } catch (error) {
+    id("msg").textContent = error.message;
+  }
+}
+
+drop.addEventListener("click", (ev) => {
+  if (picked || ev.target.id === "path") return;
+  openDialog();
+});
 
 id("title").addEventListener("input", () => { titleTouched = true; });
 
