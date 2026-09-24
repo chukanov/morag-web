@@ -13,6 +13,8 @@ const RAMP = " .:-=+*#";
 const SKY = " .:-=+*#";
 const SEA = " .:~-=+*";
 const SCRAMBLE = ".:-=+*#";
+const MATRIX = "0101010123456789ABCDEF#$%&<>"; // нули и единицы чаще — повтор это вес
+const MATRIX_RATE = 0.06; // доля видимых символов, подменённых в каждый момент
 
 // ---------------------------------------------------------------------------
 // Заставка «определяю тему»: одна из трёх сцен, случайно, только на появлении.
@@ -407,7 +409,11 @@ export function playTopicIntro(pre, { onReveal, disabled = false } = {}) {
   // Живой перелив из конфига темы (`theme.halo`) — на время сцены; иначе CSS-ореол, как раньше.
   let haloRun = null;
   const opts = sceneOptions(); // общие настройки перелива + `theme.halo.scene` поверх
-  if (haloLive(opts)) {
+  // `target: none` — сцена своим цветом, без перелива и без свечения (владелец, 24.09: «чтобы не
+  // было анимации изменения цвета символов»). CSS-ореол гасит `halo-live`, свечение — `halo-noshadow`.
+  if (opts.target === "none") {
+    pre.classList.add("halo-live", "halo-noshadow");
+  } else if (haloLive(opts)) {
     pre.classList.add("halo-live");
     // ⚠️ Цель «символы» здесь невозможна: сцена сама переписывает текст узлов каждый кадр, и
     // подмена символов дралась бы с ней. Фиксированный glyph → ореол; из случайного пула glyph
@@ -421,6 +427,11 @@ export function playTopicIntro(pre, { onReveal, disabled = false } = {}) {
     if (light || opts.shadow === false) scene = withoutShadow(scene);
     haloRun = scene ? driveHalo(pre, scene) : null;
   }
+  // «Матрица» — иногда (доля показов `scene.matrix`): видимые символы сцены на миг подменяются
+  // случайными. Подменяем здесь, в сборке строки, а не целью glyph у перелива: сцена переписывает
+  // текст узлов каждый кадр, и чужая подмена с ней дралась бы. Набор — только ASCII: полуширинная
+  // катакана из шрифта-запаса шире клетки и сдвигала бы строку сцены.
+  const matrix = opts.matrix > 0 && Math.random() < opts.matrix;
   const started = performance.now();
   const ASSEMBLE = 0.75; // сборка из шума
   const MIN_SHOW = 1.8; // сколько сцена держится минимум, даже если тема пришла мгновенно
@@ -440,6 +451,7 @@ export function playTopicIntro(pre, { onReveal, disabled = false } = {}) {
     if (wantFinish && !finishAt && t >= MIN_SHOW) finishAt = now;
     const scatter = finishAt ? Math.min(1, (now - finishAt) / 1000 / SCATTER) : 0;
     const noise = Math.floor(t * 16);
+    const tick = Math.floor(t * 10); // подмена «матрицы» держится десятую долю секунды
 
     for (let r = 0; r < g.rows; r++) {
       let line = "";
@@ -448,6 +460,9 @@ export function playTopicIntro(pre, { onReveal, disabled = false } = {}) {
         const ord = hash2(c, r);
         if (scatter > 1 - ord) ch = " ";
         else if (assemble < ord) ch = ord - assemble < 0.18 ? SCRAMBLE[(Math.floor(ord * 100) + noise) % SCRAMBLE.length] : " ";
+        else if (matrix && ch !== " " && hash2(c + tick * 131, r + tick * 17) < MATRIX_RATE) {
+          ch = MATRIX[Math.floor(hash2(c * 3 + tick, r * 5 - tick) * MATRIX.length)];
+        }
         line += ch;
       }
       // Меняем ТЕКСТ готовых узлов, а не собираем разметку заново: узлы держат фазу

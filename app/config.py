@@ -584,6 +584,10 @@ def _halo_fields(raw: dict) -> dict:
         out["period"] = float(period)
     if isinstance(raw.get("shadow"), bool):
         out["shadow"] = raw["shadow"]
+    # Доля показов заставки в режиме «матрицы» (случайная подмена символов), 0..1; только у `scene`.
+    matrix = raw.get("matrix")
+    if isinstance(matrix, (int, float)) and not isinstance(matrix, bool) and 0 < matrix <= 1:
+        out["matrix"] = float(matrix)
     return out
 
 # Что пространство наследует от витрины, если не задало своё: картинка обложки, знак (рисунок
