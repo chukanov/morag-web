@@ -15,11 +15,31 @@
 import { el, reduced } from "./dom.js";
 
 const REVEAL_MS = 600;        // проявление ленты голосов: одно движение, не мигание
-const HUES = 8;               // больше восьми оттенков глазом не различаются — дальше светлота
-// С какого тона начинается развёртка голосов. Синий — решение владельца (24.09): первый голос
-// виден чаще всех и задаёт впечатление от сцены. Значение — тон акцентного синего сайта
-// (#3F7FB5 ≈ oklch 246°), чтобы окно читалось продолжением сайта.
-const BLUE = 246;
+
+/** Цветовой круг: 12 тонов по четыре кольца — от светлого к глубокому.
+ *
+ * Цвета сняты ПИКСЕЛЯМИ с круга, который дал владелец (24.09), а не сочинены формулой:
+ * выведенные поворотом тона оттенки смотрелись бедно и плоско. Это ЕДИНСТВЕННОЕ место в окне со
+ * своими цветами — здесь картинка, а не интерфейс; всё остальное по-прежнему токенами сайта.
+ */
+const WHEEL = [
+  ["#BDB0D7", "#8671B2", "#622F92", "#4C1D73"],   //  0 фиолетовый
+  ["#9197C7", "#6D6CB1", "#2F4298", "#1F2E7A"],   //  1 сине-фиолетовый
+  ["#A9BCDE", "#5F8AC3", "#1F63A2", "#044A87"],   //  2 синий
+  ["#B2D8DE", "#5FC0C8", "#03AAB1", "#01838F"],   //  3 сине-зелёный
+  ["#BEDDD1", "#67C3A3", "#04A663", "#018A55"],   //  4 зелёный
+  ["#C2E2C6", "#AFD198", "#74BB61", "#589948"],   //  5 жёлто-зелёный
+  ["#F5F1CA", "#F5F58C", "#F1F02B", "#C5BC29"],   //  6 жёлтый
+  ["#FDEEC8", "#FCD388", "#F9AA1B", "#C48A10"],   //  7 жёлто-оранжевый
+  ["#F9DFC9", "#F5C57A", "#F59025", "#C36E17"],   //  8 оранжевый
+  ["#F9D1C3", "#F49677", "#ED4B3E", "#BD372F"],   //  9 красно-оранжевый
+  ["#F8C6C1", "#F48F76", "#ED2D31", "#BA1820"],   // 10 красный
+  ["#E2C0D4", "#D67EB3", "#A72290", "#87126F"],   // 11 красно-фиолетовый
+];
+// Голоса берут тоны не подряд, а ЧЕРЕЗ СЕМЬ (взаимно просто с 12): соседние по порядку
+// голоса оказываются на противоположных сторонах круга и не путаются. Начало — синий (владелец).
+const FIRST = 2;
+const STEP = 7;
 
 export function wave(root) {
   const canvas = el("canvas", { class: "wv-c" });
@@ -38,19 +58,60 @@ export function wave(root) {
 
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-  /** Цвет голоса: ЯРКИЙ, а не приглушённый оттенок акцента.
+  /** Разбор `#rrggbb` и смешение двух цветов — всё, что нужно для ступеней. */
+  function rgb(hex) {
+    const h = String(hex).trim().replace("#", "");
+    const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+    const n = parseInt(full, 16);
+    return Number.isFinite(n) && full.length === 6
+      ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : null;
+  }
+
+  function mix(a, b, t) {
+    const x = rgb(a);
+    const y = rgb(b);
+    if (!x || !y) return a;
+    const v = x.map((c, i) => Math.round(c + (y[i] - c) * t));
+    return `rgb(${v[0]} ${v[1]} ${v[2]})`;
+  }
+
+  /** Цвет голоса — ТОН с круга, а ступень — ГРОМКОСТЬ этого куска звука.
    *
-   * ⚠️ Сначала цвета выводились из акцента поворотом тона — и получались блёклыми: у брендового
-   * цвета низкая насыщенность, она и наследовалась. Здесь картинка, а не текст: голоса должны
-   * различаться с одного взгляда, поэтому насыщенность задаётся прямо, а от темы берётся только
-   * светлота (на светлом фоне те же цвета надо темнее, иначе они выцветают).
+   * Ровная заливка одним цветом смотрится бедно (владелец, 24.09), а свободный градиент был бы
+   * украшением ни о чём. Ступени считаются по ОГИБАЮЩЕЙ, которая и так нарисована.
+   *
+   * ⚠️ Громкое не делаем БЛЕДНЫМ. Первая попытка брала кольца круга напрямую, и так как
+   * речь почти всюду громкая, вся волна вышла пастелью — ещё беднее прежнего. Правило
+   * простое: чем громче, тем ДАЛЬШЕ цвет от фона. Тихое утопает в панели, громкое идёт
+   * чистым тоном круга, самое громкое — соседним кольцом в сторону от фона (на тёмной теме
+   * светлее, на светлой глубже). Голоса сверх двенадцати идут на второй круг со сдвинутым кольцом.
    */
-  function colour(idx) {
+  const FADE = [0.46, 0.24, 0];        // сколько фона подмешано на трёх нижних ступенях
+
+  function colour(idx, loud = 2) {
     const light = document.documentElement.getAttribute("data-theme") === "light";
-    const L = light ? 0.58 : 0.74;
-    const hue = (idx * 360) / HUES + BLUE;        // старт от синего — см. BLUE
-    const dim = idx >= HUES ? 1 - 0.16 * Math.floor(idx / HUES) : 1;
-    return `oklch(${(L * dim).toFixed(3)} 0.19 ${hue % 360})`;
+    const lap = Math.min(1, Math.floor(idx / WHEEL.length));
+    const tone = WHEEL[(FIRST + idx * STEP) % WHEEL.length];
+    const base = tone[light ? 2 - lap : 2 + lap];
+    if (loud >= 3) return tone[light ? 3 : 1];        // самое громкое — дальше всего от фона
+    return mix(base, css("--surface-2") || (light ? "#EDF2F6" : "#1E2C3B"), FADE[loud]);
+  }
+
+  /** Громкость отрезка огибающей четырьмя ступенями. Нет огибающей — средняя ступень. */
+  function loudness(i0, i1) {
+    if (!peaks) return 2;
+    const a = Math.max(0, Math.floor(i0));
+    const b = Math.min(peaks.length, Math.ceil(i1));
+    if (b <= a) return 2;
+    let sum = 0;
+    for (let i = a; i < b; i++) sum += peaks[i];
+    const v = sum / (b - a);
+    return v < 60 ? 0 : v < 115 ? 1 : v < 180 ? 2 : 3;
+  }
+
+  /** Секунда → номер столбика огибающей. */
+  function bar(sec) {
+    return !peaks || !audioSec ? 0 : (sec / audioSec) * peaks.length;
   }
 
   function fit() {
@@ -95,12 +156,19 @@ export function wave(root) {
         ? 1
         : Math.min(1, (performance.now() - revealFrom) / REVEAL_MS);
       const eased = 1 - (1 - done) ** 3;
+      // ⚠️ Реплика заливается НЕ ОДНИМ цветом, а шагами по громкости: ровная полоса выглядит
+      // бедно, а ступени показывают, где говорили в полный голос, а где роняли в сторону.
+      const stepPx = Math.max(3, W / 240);
       for (const [a, b, idx] of spans) {
         const x0 = (a / audioSec) * W;
-        const x1 = (b / audioSec) * W;
+        const x1 = Math.min((b / audioSec) * W, W * eased);
         if (x0 > W * eased) break;
-        ctx.fillStyle = colour(idx);
-        ctx.fillRect(x0, ribbonY, Math.max(1, Math.min(x1, W * eased) - x0), ribbonH);
+        for (let x = x0; x < x1; x += stepPx) {
+          const t0 = (x / W) * audioSec;
+          const t1 = (Math.min(x + stepPx, x1) / W) * audioSec;
+          ctx.fillStyle = colour(idx, loudness(bar(t0), bar(t1)));
+          ctx.fillRect(x, ribbonY, Math.max(1, Math.min(x + stepPx, x1) - x), ribbonH);
+        }
       }
       if (done < 1) dirty = true;
     }
@@ -110,8 +178,12 @@ export function wave(root) {
       for (const [a, b, idx] of live) {
         const i0 = Math.max(0, Math.floor((a / audioSec) * n));
         const i1 = Math.min(n, Math.ceil((b / audioSec) * n));
-        ctx.fillStyle = colour(idx);
+        // Столбик красится по СВОЕЙ громкости (сглаженной по соседям, иначе цвет рябит) —
+        // внутри одного куска получается ступенчатый перелив, а не плоская заливка.
+        let ring = -1;
         for (let i = i0; i < i1; i++) {
+          const now = loudness(i - 2, i + 3);
+          if (now !== ring) { ring = now; ctx.fillStyle = colour(idx, now); }
           const v = (peaks[i] / 255) * waveH;
           ctx.fillRect(i * bw, (waveH - v) / 2, Math.max(1, bw - 0.6), Math.max(1, v));
         }
@@ -140,7 +212,7 @@ export function wave(root) {
   function showLegend() {
     legend.replaceChildren(...speakers.map((name, idx) =>
       el("span", { class: "wv-who" },
-         el("i", { style: `background:${colour(idx)}` }), name)));
+         el("i", { style: `background:${colour(idx, 2)}` }), name)));
   }
 
   return {

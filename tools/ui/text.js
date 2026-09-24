@@ -23,6 +23,7 @@ const TYPE_MS = 900;       // за столько печатается кусо�
 const HOLD_MS = 460;       // сколько слово подсвечено до замены — время заметить глазом
 const GAP_MS = 240;        // пауза между правками
 const HELD_MS = 4000;      // человек листает сам — столько за ним не бежим
+const FRESH_MS = 1600;     // сколько свежая замена видна сама, без курсора
 
 export const WHY = {
   empty: "пусто или ничего не меняет",
@@ -198,11 +199,17 @@ export function textScene(root) {
       // ⚠️ Нет фразы — нет и знака: пустой (i) обещал бы объяснение, которого нет.
       const note = ok ? "" : [WHY[e.why] || e.why || "",
                               e.term ? `«${e.term}»` : ""].filter(Boolean).join(" ");
-      const fix = el("ruby", { class: ok ? "ed" : "ed no" },
-        el(ok ? "s" : "span", { class: "ed-was", text: spot.word }),
-        el("rt", { class: "ed-new" }, e.now, note ? reason(note) : null));
+      const fix = el("ruby", { class: ok ? "ed fresh" : "ed no fresh" },
+        el(ok ? "s" : "span", { class: "ed-was", text: spot.word }));
+      const rt = el("rt", { class: "ed-new", text: e.now });
+      if (note) rt.append(...reason(note, fix));
+      fix.append(rt);
       mark.replaceWith(fix);
       marks.push(fix);
+      // ⚠️ Надпись показывается ПО НАВЕДЕНИЮ (решение владельца 24.09): постоянный слой
+      // над строкой делал текст рябым. Но в МОМЕНТ замены она вспыхивает сама: в этом весь
+      // смысл показа — видно, как исправляют прямо сейчас.
+      setTimeout(() => fix.classList.remove("fresh"), FRESH_MS);
     };
     if (reduced()) land(); else setTimeout(land, hold);
   }
@@ -223,7 +230,7 @@ export function textScene(root) {
     if (over > 0) node.style.marginLeft = `${4 - over}px`;
   }
 
-  function reason(note) {
+  function reason(note, host) {
     const why = el("span", { class: "ed-why", hidden: "", text: note });
     let open = false;
     const btn = el("button", {
@@ -234,6 +241,9 @@ export function textScene(root) {
         open = !open;
         if (open) why.removeAttribute("hidden"); else why.setAttribute("hidden", "");
         btn.setAttribute("aria-expanded", open ? "true" : "false");
+        // Пока справка раскрыта, надпись держится и без курсора: иначе она угаснет
+        // раньше, чем человек дочитает фразу.
+        host.classList.toggle("open", open);
         // Спросили причину — значит читают здесь; увозить показ дальше нельзя.
         heldUntil = performance.now() + HELD_MS;
         if (open) fit(why);

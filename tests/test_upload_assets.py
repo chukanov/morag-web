@@ -58,3 +58,18 @@ def test_reduced_motion_is_honoured_in_css_and_in_js():
     assert "prefers-reduced-motion" in css
     assert "prefers-reduced-motion" in (UI / "dom.js").read_text(encoding="utf-8")
     assert "reduced()" in (UI / "wave.js").read_text(encoding="utf-8")
+
+
+def test_the_correction_label_lives_over_the_text_and_only_on_hover():
+    """⚠️ Надпись над словом НЕ висит постоянно и НЕ входит в поток.
+
+    Оба свойства куплены на живом показе: в потоке `ruby` раздвигала слово под ширину
+    надписи и строка расползалась дырами, а постоянный слой надписей делал текст рябым
+    (решения владельца 24.09).
+    """
+    css = (UI / "upload.css").read_text(encoding="utf-8")
+    rule = css[css.index(".ed-new{"):]
+    rule = rule[: rule.index("}")]
+    assert "position:absolute" in rule, "надпись вне потока"
+    assert "opacity:0" in rule, "сама по себе не видна"
+    assert ".ed:hover .ed-new" in css, "показывается по наведению"

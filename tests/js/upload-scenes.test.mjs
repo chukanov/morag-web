@@ -218,11 +218,16 @@ const { textScene } = await import(join(repo, "tools/ui/text.js"));
   assert.match(whys.map((w) => w.textContent).join(" "), /меняет число/);
   assert.match(whys.map((w) => w.textContent).join(" "), /сломало бы известный термин.*Мария Ковалёва/,
                "и какой именно термин сломался бы — там же, а не в строке");
+  const host = ruby.find((r) => r.kids.some((k) => (k.kids || []).some((x) => x === eyes[0])));
   for (const fn of eyes[0]._on.click || []) fn({});
   assert.ok(!("hidden" in whys[0].attrs), "нажали — фраза появилась");
   assert.equal(eyes[0].attrs["aria-expanded"], "true");
+  // ⚠️ Надпись видна по наведению, а пока справка раскрыта — держится и без курсора:
+  // иначе она угаснет раньше, чем человек дочитает фразу.
+  assert.ok(host && host.classList.contains("open"), "раскрытая справка держит надпись");
   for (const fn of eyes[0]._on.click || []) fn({});
   assert.ok("hidden" in whys[0].attrs, "нажали ещё раз — убралась");
+  assert.ok(!host.classList.contains("open"), "и надпись больше не держится");
 
   scene.apply({ t: "turn.done", turn: 0, start: 61, n: 5, changed: true });
   assert.equal(scene.state().turns, 5);

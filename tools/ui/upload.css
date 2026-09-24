@@ -89,18 +89,23 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
 @keyframes tx-pulse{0%,100%{box-shadow:0 0 0 3px var(--accent-wash)}
                     50%{box-shadow:0 0 0 7px var(--accent-wash)}}
 
-/* Корректура: старое зачёркнуто и осталось, замена надписана сверху красным — как правят на
-   бумаге.
+/* Корректура: старое слово остаётся в тексте с пометкой, а замена живёт СЛОЕМ НАД ТЕКСТОМ.
    ⚠️ Надпись вынута ИЗ ПОТОКА (`position:absolute`), хотя разметка и `ruby`: сама ruby
-   раздвигает слово под ширину надписи, и строка расползалась дырами в полстроки
-   («очередь      :») — читать такой текст невозможно. Вынутая надпись висит над словом
-   и на перенос текста не влияет вовсе. */
+   раздвигает слово под ширину надписи, и строка расползалась дырами в полстроки.
+   ⚠️ Показывается ПО НАВЕДЕНИЮ (владелец, 24.09): постоянный слой надписей делает
+   страницу рябой. Сама собой она видна дважды: в момент замены (`fresh`) и пока
+   раскрыта справка (`open`). */
 .ed{display:inline-block;position:relative}
 .ed-was{color:var(--ink-dim);text-decoration:line-through var(--bad)}
-.ed.no .ed-was{color:var(--ink);text-decoration:none}
-.ed-new{position:absolute;left:0;bottom:100%;display:block;white-space:nowrap;
-        font:600 11px/1.2 var(--mono);color:var(--bad);letter-spacing:.02em}
-.ed.no .ed-new{text-decoration:line-through;opacity:.75}
+/* ⚠️ У ОТВЕРГНУТОЙ правки слово не зачёркнуто — оно осталось как было. Без своей пометки
+   оно стало бы неотличимо от обычного: наводить на него было бы незачем и некуда. */
+.ed.no .ed-was{color:var(--ink);text-decoration:underline dotted var(--bad);text-underline-offset:3px}
+.ed-new{position:absolute;left:0;bottom:100%;display:block;white-space:nowrap;z-index:3;
+        font:600 11px/1.2 var(--mono);color:var(--bad);letter-spacing:.02em;
+        opacity:0;pointer-events:none;transition:opacity .14s ease-out}
+.ed:hover .ed-new,.ed.open .ed-new,.ed.fresh .ed-new{opacity:1;pointer-events:auto}
+.ed.no .ed-new{text-decoration:line-through;opacity:0}
+.ed.no:hover .ed-new,.ed.no.open .ed-new,.ed.no.fresh .ed-new{opacity:.85}
 
 /* Почему не приняли — под знаком ⓘ рядом с заменой: фраза длиннее самой правки и
    перетягивает внимание на себя. Раскрывается там же, над текстом, пузырьком поверх строк. */
