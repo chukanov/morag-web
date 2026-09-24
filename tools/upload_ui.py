@@ -35,6 +35,26 @@ SITE_LLM_PATH = upload.SITE_LLM_PATH
 
 HERE = Path(__file__).resolve().parent
 PAGE = HERE / "upload-ui.html"
+UI = HERE / "ui"                       # стили, шрифты и сцены страницы
+TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+         ".woff2": "font/woff2", ".png": "image/png", ".svg": "image/svg+xml",
+         ".html": "text/html; charset=utf-8", ".jsonl": "application/x-ndjson; charset=utf-8"}
+
+# ⚠️ Опрос состояния делает ДОРОГИЕ вещи: ходит в локальный стек, дважды в корпоративный сайт и
+# обходит три каталога с видео. На двадцатиминутном прогоне при опросе раз в две секунды это
+# шестьсот походов в сеть. Ответы кэшируем, а список видео во время работы не собираем вовсе —
+# посреди прогона файл не выбирают.
+_CACHE: dict[str, tuple[float, object]] = {}
+
+
+def cached(key: str, ttl: float, fn):
+    now = time.monotonic()
+    hit = _CACHE.get(key)
+    if hit and now - hit[0] < ttl:
+        return hit[1]
+    value = fn()
+    _CACHE[key] = (now, value)
+    return value
 # Где искать видео: обычные папки Mac плюс то, что укажут переменной. Глубина — два уровня:
 # «Загрузки/Встречи/доклад.mp4» встречается, а сканировать весь диск незачем.
 FOLDERS = [Path.home() / "Downloads", Path.home() / "Desktop", Path.home() / "Movies"]
@@ -217,6 +237,20 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def _static(self, name: str) -> None:
+        """Файл из `tools/ui/`. ⚠️ Белый список расширений и проверка, что путь НЕ вышел из
+        каталога: `..` в адресе иначе отдаёт что угодно с диска, а сервер слушает localhost, куда
+        может постучаться любая вкладка. Токен здесь не спрашиваем — в стилях и шрифтах данных
+        нет, как и в самой странице."""
+        if not name or ".." in name:
+            self._json({"error": "нет такого"}, 404)
+            return
+        path = (UI / name).resolve()
+        if UI.resolve() not in path.parents or path.suffix not in TYPES or not path.is_file():
+            self._json({"error": "нет такого"}, 404)
+            return
+        self._send(200, path.read_bytes(), TYPES[path.suffix])
+
     # --- маршруты ------------------------------------------------------------------------
 
     def do_GET(self) -> None:
@@ -225,12 +259,25 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/":
             self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
             return
+        if url.path.startswith("/ui/"):
+            self._static(url.path[4:])
+            return
         if not self._guard(query):
             return
         if url.path == "/api/state":
-            self._json({"job": dict(STATE), "log": upload.LOG[-200:], "stack": bool(upload.stack_health()),
-                        "site": site_state(), "videos": videos(), "llm": llm_state(),
+            running = STATE.get("stage") == "running"
+            self._json({"job": dict(STATE), "log": upload.LOG[-200:],
+                        "stack": bool(cached("stack", 5.0, upload.stack_health)),
+                        "site": cached("site", 30.0, site_state),
+                        "videos": [] if running else cached("videos", 5.0, videos),
+                        "llm": cached("llm", 30.0, llm_state),
                         "home": str(upload.HOME), "ext": list(upload.VIDEO_EXT)})
+            return
+        if url.path == "/api/events":
+            # Только память: эту ручку опрашивают часто, и она не имеет права ходить в сеть.
+            since = int((query.get("since") or ["0"])[0] or 0)
+            items, cursor = upload.events_since(since)
+            self._json({"events": items, "cursor": cursor, "stage": STATE.get("stage", "idle")})
             return
         self._json({"error": "нет такого"}, 404)
 
@@ -239,6 +286,10 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(url.query)
         if not self._guard(query):
             return
+        # ⚠️ Любое действие страницы делает кэш сводок неправдой: человек нажал «войти» или
+        # «свой ключ» и в следующий же опрос ждёт увидеть НОВОЕ состояние, а не тридцатисекундной
+        # давности. Кэш тут ради частого опроса, а не ради экономии на действиях.
+        _CACHE.clear()
         length = int(self.headers.get("Content-Length") or 0)
         try:
             body = json.loads(self.rfile.read(length) or b"{}")

@@ -32,6 +32,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import getpass
 import json
 import os
@@ -74,6 +75,11 @@ MORAG_REPO = Path(os.environ.get("MORAG_REPO") or (REPO.parent / "morag"))
 VIDEO_EXT = ("mp4", "webm", "mov", "mkv")
 SIDECARS = ("record.slides.json", "record.refs.json", "record.annotations.json")
 POLL_SEC = 15
+# ⚠️ С лентой событий опрашиваем адаптер РАЗ В СЕКУНДУ, а не раз в пятнадцать: он локальный,
+# пустой ответ ~120 байт, а раз в пятнадцать секунд картинка дёргалась бы рывками по четверти
+# минуты. В терминальный лог при этом по-прежнему пишем раз в минуту — там частить незачем.
+EVENT_POLL_SEC = 1.0
+EVENTS_MAX = 20000
 
 
 class Step(Exception):
@@ -83,6 +89,40 @@ class Step(Exception):
 # Хвост сообщений — для страницы (`upload_ui.py`): те же строки, что в терминале. Кольцо, а не
 # файл: страница показывает ход работы, а разбор потом — в терминале.
 LOG: list[str] = []
+
+# Лента событий стадий — то, из чего страница рисует работу. События приходят из адаптера
+# (диаризация, куски, замены, голоса) и добавляются здесь (шаги клиента, пики волны).
+# ⚠️ Нумерация СВОЯ и сквозная: у страницы должен быть ОДИН монотонный курсор, иначе она не
+# отличит «событие адаптера #5» от «своего #5» и покажет кашу.
+EVENTS: list[dict] = []
+_SEQ = [0]
+_T0 = [0.0]                     # начало прогона: время событий считается от него, а не от эпохи
+TRACE: list[Path] = []          # куда писать трассу прогона (стенд); пусто — не пишем
+
+
+def emit(kind: str, **fields) -> None:
+    """Событие в ленту. ⚠️ Имя `event` занято: так зовётся рубрика записи в конвейере — совпадение
+    имён давало «NoneType is not callable» в середине прогона.
+
+    Событие в ленту. Показ работы — украшение: оно не имеет права уронить загрузку."""
+    try:
+        if not _T0[0]:
+            _T0[0] = time.monotonic()
+        _SEQ[0] += 1
+        # ⚠️ Номер конверта — `seq`, а не `i`: `i` у события занято смыслом (номер куска).
+        evt = {"t": kind, "seq": _SEQ[0], "at": round(time.monotonic() - _T0[0], 2), **fields}
+        EVENTS.append(evt)
+        del EVENTS[:-EVENTS_MAX]
+        for path in TRACE:
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(evt, ensure_ascii=False) + "\n")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def events_since(cursor: int) -> tuple[list[dict], int]:
+    items = [e for e in EVENTS if e["seq"] > cursor]
+    return items, (items[-1]["seq"] if items else cursor)
 
 
 def size_of(n: int) -> str:
@@ -254,6 +294,36 @@ def ffmpeg_audio(video: Path, out: Path) -> None:
                     "-vn", "-acodec", "libmp3lame", "-q:a", "4", str(out)], check=True)
 
 
+WAVE_BARS = 1200      # столбиков на всю запись: шире окна, мельче — глазу не нужно
+WAVE_RATE = 4000      # частота для огибающей; больше незачем, а меньше теряет короткие реплики
+
+
+def wave_peaks(audio: Path) -> None:
+    """Огибающая звука для шкалы в окне: одно событие на всю запись, ~1.6 КБ.
+
+    ⚠️ Нормируем по 99-му ПЕРЦЕНТИЛЮ, а не по максимуму: один хлопок дверью или щелчок микрофона
+    иначе придавливает всю запись в ровную ниточку — ради одного столбика теряется вся картинка.
+
+    Украшение не имеет права ронять загрузку: не нашёлся ffmpeg, не встала numpy, битый звук —
+    молча уходим, окно нарисует ровную линию.
+    """
+    try:
+        import numpy as np  # noqa: PLC0415 — нужен только здесь
+
+        raw = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", str(audio),
+                              "-ac", "1", "-ar", str(WAVE_RATE), "-f", "s16le", "-"],
+                             check=True, capture_output=True).stdout
+        x = np.frombuffer(raw, dtype="<i2")
+        if x.size < WAVE_BARS:
+            return
+        x = np.abs(x[:x.size - x.size % WAVE_BARS].reshape(WAVE_BARS, -1)).max(axis=1)
+        top = float(np.percentile(x, 99)) or 1.0
+        bars = np.clip(x / top * 255.0, 0, 255).astype("uint8")
+        emit("wave.peaks", n=WAVE_BARS, b64=base64.b64encode(bars.tobytes()).decode())
+    except Exception as error:  # noqa: BLE001
+        say(f"  шкала звука не построилась ({type(error).__name__}) — окно покажет работу без неё")
+
+
 def stack_health() -> dict:
     try:
         with client(ASR_BASE, {}, timeout=20) as c:
@@ -331,6 +401,9 @@ def voiceprint(work: Path, artifact: Path) -> Path | None:
         return out
     audio = work / "audio.mp3"
     if not audio.is_file():
+        # ⚠️ Молчать тут нельзя: ровно эта тишина и прятала дефект — звук удалялся шагом раньше,
+        # отпечатки не считались никогда, и снаружи всё выглядело исправным.
+        say("  звука нет — отпечатки голосов пропускаю, голоса приедут безымянными")
         return None
     try:
         import voiceprints   # noqa: PLC0415 — нужен только здесь
@@ -360,38 +433,60 @@ def transcribe(work: Path, video: Path, rid: str, title: str, speakers: list[str
                    + (f" — {why}" if why else " — поднимите `stack.sh up` или запустите с --stack"))
     audio = work / "audio.mp3"
     ffmpeg_audio(video, audio)
+    wave_peaks(audio)      # шкала нужна с первой секунды показа, а не после расшифровки
     hints = json.dumps({"about": title, "names": speakers, "terms": []}, ensure_ascii=False)
     say(f"отправляю звук в адаптер ({size_of(audio.stat().st_size)})…")
     with client(ASR_BASE, {}, timeout=900) as c:
         with audio.open("rb") as fh:
             r = c.post("/v1/audio/transcriptions",
                        files={"file": (audio.name, fh, "audio/mpeg")},
-                       data={"mode": "async", "episode": rid, "title": title, "url": str(video), "hints": hints})
+                       data={"mode": "async", "episode": rid, "title": title, "url": str(video),
+                         "hints": hints, "events": "1"})
         r.raise_for_status()
         job = r.json()["job_id"]
         say(f"задача {job}; жду (диаризация + whisper + LLM-стадии — на час записи ~10–15 минут)")
         polls = 0
+        cursor = 0
+        spent = 0.0
         while True:
-            time.sleep(POLL_SEC)
+            time.sleep(EVENT_POLL_SEC)
+            spent += EVENT_POLL_SEC
             try:
-                s = c.get(f"/v1/jobs/{job}", timeout=60).json()
+                s = c.get(f"/v1/jobs/{job}", params={"since": cursor}, timeout=60).json()
             except (httpx.HTTPError, ValueError):
                 continue
+            # ⚠️ Старый адаптер про ленту не знает и просто не вернёт этих ключей — тогда работаем
+            # как раньше, по строке прогресса. Разъезд версий не должен ломать загрузку.
+            for evt in s.get("events") or ():
+                # ⚠️ Нумерацию и время ставим СВОИ: у адаптера они относительны его задачи, а
+                # окну нужна одна шкала на весь прогон — вместе с шагами клиента.
+                emit(str(evt.pop("t", "?")),
+                     **{k: v for k, v in evt.items() if k not in ("seq", "at")})
+            if s.get("dropped"):
+                # Дыру показываем, а не прячем: иначе картинка будет плавной, но с провалом.
+                emit("gap", n=int(s["dropped"]))
+            cursor = int(s.get("cursor") or cursor)
             status = s.get("status")
             if status == "done":
                 break
             if status == "error":
                 raise Step(f"адаптер вернул ошибку: {json.dumps(s, ensure_ascii=False)[:600]}")
             polls += 1
-            if polls % 4 == 0:
-                say(f"  …{s.get('progress', status)} (~{polls * POLL_SEC} с)")
+            if spent >= 60 and polls % int(60 / EVENT_POLL_SEC) == 0:
+                say(f"  …{s.get('progress', status)} (~{int(spent)} с)")
     result = s["result"]
     x = result.get("x_enriched") or {}
     if not x.get("markdown") or not (x.get("words") or {}).get("turns"):
         raise Step("в ответе адаптера нет x_enriched.markdown/words — это не тот адаптер или прогон без выравнивания")
     artifact.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
     (work / "transcript.md").write_text(x["markdown"], encoding="utf-8")
-    audio.unlink(missing_ok=True)
+    # ⚠️⚠️ Звук здесь НЕ удаляем. Удалял — и следующий шаг, отпечатки голосов, молча не работал
+    # НИ РАЗУ: он читает тот же `audio.mp3` и без него просто возвращает `None`. Пакет уезжал без
+    # `voices.json`, сервер честно откатывался на «незнакомцы под номерами», и узнавание голосов,
+    # ради которого всё это заведено, не срабатывало вообще. Тесты не ловили: они создают
+    # `audio.mp3` руками, а порядок шагов конвейера не проверял никто.
+    # Теперь звук живёт до конца работы: его же читает шкала волны в окне, и на возобновлённом
+    # прогоне не приходится снова гонять ffmpeg по гигабайтному видео.
     say(f"расшифровка готова: {work / 'transcript.md'}")
     return artifact
 
@@ -586,10 +681,15 @@ def pipeline(video: Path, *, title: str, date: str, event: str = "", speakers: l
             ensure_gateway()
             stack("up")
             stack_started = True
+        TRACE[:] = [work / "events.jsonl"]   # трасса прогона: по ней настраивается окно (стенд)
+        emit("client.step", step="audio", say="звук из видео")
         artifact = transcribe(work, video, rid, title, speakers)
+        emit("client.step", step="voices", say="отпечатки голосов")
         voiceprint(work, artifact)
         if with_screen:
+            emit("client.step", step="record", say="черновик записи")
             record = local_record(work, artifact, rid, title, date)
+            emit("client.step", step="screen", say="экран из видео")
             screen(work, video, record)
     finally:
         if stack_started:
@@ -607,7 +707,12 @@ def pipeline(video: Path, *, title: str, date: str, event: str = "", speakers: l
         files.append(("slides.zip", work / "slides.zip"))
     if slides_pdf:
         files.append(("slides.pdf", slides_pdf))
-    return upload(work, site_url, cookies, manifest, files, video, wait=wait)
+    rid = upload(work, site_url, cookies, manifest, files, video, wait=wait)
+    # Звук держим до этого места: до принятия пакета он может понадобиться — отпечаткам голосов,
+    # шкале волны в окне и возобновлённому прогону (иначе ffmpeg снова полезет в гигабайтное
+    # видео). Пакет принят — больше не нужен.
+    (work / "audio.mp3").unlink(missing_ok=True)
+    return rid
 
 
 def cmd_run(args: argparse.Namespace) -> int:

@@ -107,7 +107,7 @@ def test_run_transcribes_uploads_in_order_and_waits(env, monkeypatch):
     assert fake.transcriptions == 1 and fake.polls >= 2
     work = upload.HOME / "2026-03-12-kafka-bez-boli"
     assert (work / "artifact.json").is_file() and (work / "transcript.md").is_file()
-    assert not (work / "audio.mp3").exists(), "звук после расшифровки не нужен — удалён"
+    assert not (work / "audio.mp3").exists(), "пакет принят — звук больше не нужен, удалён в конце"
     assert fake.manifests[0]["speakers"] == ["Мария Кузнецова"] and fake.manifests[0]["video"] == "video.mp4"
     assert [n for n, _ in fake.uploads] == ["artifact.json", "video.mp4"], "видео — последним"
     assert dict(fake.uploads)["video.mp4"] == 3000
@@ -196,3 +196,35 @@ def test_gateway_is_configured_before_work_not_only_at_login(tmp_path, monkeypat
     monkeypatch.delenv("OR_KEY", raising=False)
     with pytest.raises(upload.Step, match="шлюз"):
         upload.ensure_gateway()
+
+
+def test_the_audio_outlives_transcription_so_voiceprints_can_be_taken(env, monkeypatch):
+    """⚠️⚠️ Регрессия, из-за которой узнавание голосов не работало НИ РАЗУ.
+
+    `transcribe()` удалял `audio.mp3` последним действием, а отпечатки считаются СЛЕДУЮЩИМ шагом
+    из того же файла — и без него шаг молча возвращал `None`. Пакет уезжал без `voices.json`,
+    сервер честно откатывался на «незнакомцы под номерами», и снаружи всё выглядело исправным.
+    Прежний тест это пропускал: он проверял, что звука нет, — то есть закреплял сам дефект.
+
+    Держим ИНВАРИАНТ, а не файл: в момент, когда считаются отпечатки, звук обязан быть на диске.
+    """
+    fake, video, tmp = env
+    upload.save_session("https://site.example.org", {"morag_session": "abc"})
+
+    sys.path.insert(0, str(REPO / "tools"))
+    import voiceprints
+
+    seen: dict = {}
+
+    def fake_prints(artifact, audio, **kw):
+        seen["audio"] = Path(audio)
+        seen["existed"] = Path(audio).is_file() and Path(audio).stat().st_size > 0
+        return {"Speaker_0": {"centroid": [0.0] * 192, "air_sec": 700.0, "cluster": "SPEAKER_00"}}
+
+    monkeypatch.setattr(voiceprints, "fingerprints", fake_prints)
+    assert run(video) == 0
+
+    assert seen.get("existed"), "звук должен быть на диске, когда считаются отпечатки"
+    work = upload.HOME / "2026-03-12-kafka-bez-boli"
+    assert (work / "voices.json").is_file()
+    assert "voices.json" in [n for n, _ in fake.uploads], "отпечатки обязаны уехать в пакете"

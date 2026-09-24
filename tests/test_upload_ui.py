@@ -62,6 +62,15 @@ def get(url: str, headers: dict | None = None) -> tuple[int, dict | str]:
         return e.code, json.loads(e.read().decode() or "{}")
 
 
+def raw(url: str) -> tuple[int, bytes, str]:
+    """Сырой ответ: статике нужен и тип содержимого, и то, что она не JSON."""
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            return r.status, r.read(), r.headers.get("Content-Type", "")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read(), e.headers.get("Content-Type", "")
+
+
 def post(url: str, data: dict, headers: dict | None = None) -> tuple[int, dict]:
     req = urllib.request.Request(url, data=json.dumps(data).encode(),
                                  headers={"Content-Type": "application/json", **(headers or {})})
@@ -279,3 +288,50 @@ def test_window_falls_back_to_the_browser_without_pyobjc(monkeypatch):
     sys.argv = ["upload.py", "app", "--port", "8123"]
     assert upload.main() == 0
     assert called == {"port": 8123, "browser": True}
+
+
+def test_the_event_feed_is_cheap_and_cursored(server, monkeypatch):
+    """⚠️ Эту ручку опрашивают раз в секунду весь прогон — она не имеет права ходить в сеть.
+
+    Проверяем буквально: ломаем ВСЁ, что делает дорогой опрос состояния (стек, сайт, обход
+    каталогов), и лента обязана отвечать как ни в чём не бывало.
+    """
+    base, tmp = server
+
+    def boom(*a, **kw):
+        raise AssertionError("лента событий полезла в сеть")
+
+    monkeypatch.setattr(upload, "stack_health", boom)
+    monkeypatch.setattr(upload_ui, "site_state", boom)
+    monkeypatch.setattr(upload_ui, "videos", boom)
+
+    upload.EVENTS.clear()
+    upload._SEQ[0] = 0
+    upload.emit("stage.start", stage="diarize")
+    upload.emit("chunk.done", i=1, raw="привет")
+
+    code, body = get(f"{base}/api/events?t=tok")
+    assert code == 200
+    assert [e["t"] for e in body["events"]] == ["stage.start", "chunk.done"]
+    assert body["cursor"] == 2 and body["stage"] == "idle"
+
+    assert get(f"{base}/api/events?since=1&t=tok")[1]["events"] == body["events"][1:]
+    assert get(f"{base}/api/events?since=99&t=tok")[1] == {"events": [], "cursor": 99, "stage": "idle"}
+    assert get(f"{base}/api/events")[0] == 403, "лента за токеном, как и остальное api"
+
+
+def test_static_of_the_page_is_served_without_a_token_but_not_beyond_its_folder(server):
+    """Стили и шрифты отдаём без токена — данных в них нет, как и в самой странице. А вот выйти
+    из каталога нельзя: сервер слушает localhost, и постучаться может любая вкладка."""
+    base, tmp = server
+    ui = Path(upload_ui.UI)
+    ui.mkdir(exist_ok=True)
+    (ui / "probe.css").write_text(":root{--x:1}", encoding="utf-8")
+    try:
+        code, body, ctype = raw(f"{base}/ui/probe.css")
+        assert code == 200 and b"--x" in body and ctype.startswith("text/css")
+        assert raw(f"{base}/ui/../upload.py")[0] == 404
+        assert raw(f"{base}/ui/nope.css")[0] == 404
+        assert raw(f"{base}/ui/")[0] == 404
+    finally:
+        (ui / "probe.css").unlink(missing_ok=True)
