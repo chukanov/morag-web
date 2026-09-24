@@ -201,7 +201,11 @@ const { textScene } = await import(join(repo, "tools/ui/text.js"));
   })(root);
   const cls = (c) => all.filter((n) => n.classList.contains(c)).map((n) => n.textContent);
 
-  assert.equal(all.filter((n) => n.tagName === "RUBY").length, 3, "каждая правка — свой узел");
+  // ⚠️ Узлы — обычные inline-`span`: у `ruby` и `inline-block` своя высота и свои точки переноса,
+  // из-за них строка с правкой становилась выше соседних.
+  assert.equal(all.filter((n) => n.classList.contains("ed")).length, 3, "каждая правка — свой узел");
+  assert.ok(all.filter((n) => n.classList.contains("ed")).every((n) => n.tagName === "SPAN"),
+            "и это обычный span, а не ruby");
   assert.deepEqual(cls("ed-now"), ["Airflow"], "принятая правка — это новое слово в тексте");
   assert.deepEqual(cls("ed-kept"), ["H200", "Ковалёв"], "отвергнутая текст не меняет вовсе");
 

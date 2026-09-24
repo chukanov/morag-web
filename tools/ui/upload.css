@@ -97,12 +97,16 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
    корректуры.
    ⚠️ Слой вынут ИЗ ПОТОКА (`position:absolute`), хотя разметка и `ruby`: сама ruby раздвигает
    слово под ширину надписи, и строка расползалась дырами в полстроки. */
-.ed{display:inline-block;position:relative}
+/* ⚠️ Строка с правкой обязана быть ТОЙ ЖЕ высоты, что соседние. `inline-block` её
+   распирал (у него своя высота со своим междустрочьем) и добавлял точку переноса вокруг
+   себя — точка после слова уезжала на следующую строку. Обычный inline с `position:relative`
+   держит слой так же, а в потоке не меняет ничего. */
+.ed{display:inline;position:relative}
 .ed-now{color:var(--bad)}
 /* ⚠️ Отвергнутая правка текст НЕ меняет вовсе. Без своей пометки такое слово неотличимо
    от обычного: наводить на него было бы незачем и некуда. */
 .ed.no .ed-kept{text-decoration:underline dotted var(--bad);text-underline-offset:3px}
-.ed-old{position:absolute;left:0;bottom:100%;display:block;white-space:nowrap;z-index:3;
+.ed-old{position:absolute;left:0;bottom:1.35em;display:block;white-space:nowrap;z-index:3;
         font:11px/1.3 var(--mono);color:var(--ink-dim);background:var(--surface);
         border:1px solid var(--line);border-radius:6px;padding:2px 7px;box-shadow:var(--shadow-sm);
         opacity:0;pointer-events:none;transition:opacity .14s ease-out}

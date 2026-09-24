@@ -221,9 +221,13 @@ export function textScene(root) {
         ? `было: ${spot.word}`
         : [`не принято: ${e.now}`, WHY[e.why] || e.why || "",
            e.term ? `«${e.term}»` : ""].filter(Boolean).join(" · ");
-      const fix = el("ruby", { class: ok ? "ed fresh" : "ed no fresh" },
+      // ⚠️ Простые `span`, а НЕ `ruby`/`rt`: у `ruby` своя раскладка, а у `inline-block`, которым
+      // её приходилось гасить, — своя высота и свои точки переноса: строка с правкой становилась
+      // выше соседних, а знак препинания за словом уезжал на следующую. Замена обязана
+      // вести себя как обычное слово — иначе текст дёргается на каждой правке.
+      const fix = el("span", { class: ok ? "ed fresh" : "ed no fresh" },
         el("span", { class: ok ? "ed-now" : "ed-kept", text: ok ? e.now : spot.word }));
-      const rt = el("rt", { class: "ed-old", text: note });
+      const rt = el("span", { class: "ed-old", text: note });
       fix.append(rt);
       mark.replaceWith(fix);
       marks.push(fix);
