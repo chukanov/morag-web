@@ -111,6 +111,11 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
         border:1px solid var(--line);border-radius:6px;padding:2px 7px;box-shadow:var(--shadow-sm);
         opacity:0;pointer-events:none;transition:opacity .14s ease-out}
 .ed:hover .ed-old,.ed.fresh .ed-old{opacity:1}
+/* Слово, которого в тексте нет, — аккуратно зачёркнуто одной оранжевой линией; подпись
+   «было» к этому ничего не добавляла. */
+.ed-gone{color:var(--ink);text-decoration:line-through var(--bad);text-decoration-thickness:1px;
+         text-decoration-skip-ink:none}
+.ed-note{color:var(--ink-faint);margin-left:6px}
 
 /* исправления */
 .fx-count{font:12px/1.5 var(--mono);color:var(--ink-dim);margin:0}

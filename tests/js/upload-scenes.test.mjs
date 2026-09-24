@@ -211,8 +211,12 @@ const { textScene } = await import(join(repo, "tools/ui/text.js"));
 
   const over = cls("ed-old");
   assert.equal(over.length, 3, "слой есть у каждой");
-  assert.match(over[0], /было: эйр флоу/, "у принятой в слое — старое слово");
-  assert.match(over[1], /не принято: H100/, "у отвергнутой — что предлагали…");
+  // ⚠️ Слово в слое ЗАЧЁРКНУТО, а не подписано «было»: зачёркивание и значит «этого в тексте
+  // нет» — у принятой правки это прежнее слово, у отвергнутой — предложенная замена.
+  const gone = all.filter((n) => n.classList.contains("ed-gone"));
+  assert.ok(gone.every((n) => n.tagName === "S"), "зачёркнуто разметкой, а не словами");
+  assert.deepEqual(gone.map((n) => n.textContent), ["эйр флоу", "H100", "Ковалев"]);
+  assert.ok(!over.join(" ").includes("было:"), "подписи «было» нет");
   assert.match(over[1], /меняет число/, "…и почему не взяли");
   assert.match(over[2], /сломало бы известный термин.*Мария Ковалёва/, "и какой именно термин");
   assert.ok(!all.some((n) => n.classList.contains("ed-i")), "знака ⓘ больше нет — причина в том же слое");
