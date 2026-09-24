@@ -50,6 +50,13 @@ class EngineCfg(BaseModel):
     # держится только текстом вопроса, как раньше. Вложенность, а не соседний ключ в `engines`:
     # это не другой корпус, а другой режим того же.
     record: "EngineCfg | None" = None
+    # Когда индекс в последний раз собирали. Файл пишет плановый прогон индексации (у нас —
+    # `deploy/server/index-nightly.sh` в cron): `{"at": <начало прогона>}`. По нему сайт
+    # показывает в списке, доехала ли запись до поиска, — с 24.09 индексация идёт не на каждую
+    # загрузку, а оптом, и человек должен видеть это, а не гадать, почему запись не находится.
+    # ⚠️ Время НАЧАЛА прогона, а не конца: запись, изменённая во время прогона, честно считается
+    # неиндексированной. Пусто — про индекс ничего не обещаем и ничего не показываем.
+    index_stamp: str = ""
 
 
 EngineCfg.model_rebuild()
@@ -132,6 +139,37 @@ class EditingCfg(BaseModel):
     # связала бы их навсегда. `{record_dir}` подставляется.
     rebuild: list[str] = Field(default_factory=lambda: [
         sys.executable, "tools/make_record.py", "{record_dir}"])
+
+
+class VoicesCfg(BaseModel):
+    """Реестр голосов: кто говорит — решает СЕРВЕР по отпечатку (`app/content/registry.py`).
+
+    Пока реестра нет (`registry` пуст), запись с чужой машины принимается по-старому: её номера
+    сдвигаются в отдельный диапазон, чтобы не столкнуться с корпусными, и голоса остаются
+    безымянными. С реестром знакомый голос получает свой номер и имя, незнакомый заводится один
+    раз на весь корпус.
+
+    ⚠️ Пороги — НЕ вкус, а замеры корпуса: при 0.55 два разных человека с косинусом 0.617
+    считались одним, а без нижней границы эфира каждый вопрос из зала приклеивался к докладчику.
+    Менять их — значит менять решения, уже принятые по всем записям.
+
+    ⚠️ Файл реестра — биометрия: держать вне репозитория и вне доставки (`rsync --delete`).
+    """
+
+    registry: str = ""             # путь к файлу; пусто — узнавание выключено
+    # Два порога, а не один, и это главное решение: ошибки здесь разной цены. Лишний номер
+    # правится одной строкой в словаре имён, а СКЛЕЙКА двух людей в один голос необратима —
+    # чужие слова навсегда приписаны человеку. Поэтому «тот же человек» требует уверенности
+    # (0.75), а всё, что ниже, становится новым голосом; в полосе сомнения (0.65…0.75) к нему
+    # прикладывается подсказка «похож на Speaker_N», которую подтверждает человек.
+    match_threshold: float = 0.75
+    suspect_threshold: float = 0.65
+    # Короче — голос помечается `short`: он остаётся собой, но верстак может его не показывать.
+    # ⚠️ Это НЕ условие регистрации: короткого незнакомца мы больше не приклеиваем к ближайшему
+    # (решение владельца 24.09) — приписывать человеку чужие двенадцать секунд хуже, чем завести
+    # ещё один безымянный номер.
+    short_air_min: float = 0.25    # минут
+    max_centroids: int = 8
 
 
 class IngestLlmCfg(BaseModel):
@@ -356,6 +394,7 @@ class AppConfig(BaseModel):
     media_base: str = ""
     editing: EditingCfg = Field(default_factory=EditingCfg)
     ingest: IngestCfg = Field(default_factory=IngestCfg)
+    voices: VoicesCfg = Field(default_factory=VoicesCfg)
     auth: AuthCfg = Field(default_factory=AuthCfg)
     topic: TopicCfg = Field(default_factory=TopicCfg)
     limits: LimitsCfg = Field(default_factory=LimitsCfg)
@@ -439,6 +478,12 @@ def _anchor(data: dict, base: Path) -> dict:
     limits = data.get("limits")
     if isinstance(limits, dict) and isinstance(limits.get("rate_limit"), dict):
         fix(limits["rate_limit"], "state_path")
+    for key in ("engine", *[k for k in (data.get("engines") or {})]):
+        node = data.get("engine") if key == "engine" else (data.get("engines") or {}).get(key)
+        if isinstance(node, dict):
+            fix(node, "index_stamp")
+    if isinstance(data.get("voices"), dict):
+        fix(data["voices"], "registry")
     if isinstance(data.get("ingest"), dict):
         fix(data["ingest"], "dir")
         fix(data["ingest"], "archive")

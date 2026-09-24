@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..auth.roles import PERMISSIONS, allows
+from ..content import registry
 from .ask import _client_ip
 
 router = APIRouter(prefix="/api", tags=["voices"])
@@ -100,6 +101,60 @@ async def voices(request: Request) -> dict:
     if not data["ready"]:
         data["hint"] = "снимок не собран: python3 tools/voices.py --scan"
     return data
+
+
+# --- узнавание голоса по отпечатку ------------------------------------------------------
+# ⚠️ Объявлены ДО `/voices/{voice}`, как и `/voices/queue`: иначе «identify» уехал бы в параметр
+# и попал бы в карточку голоса с таким именем.
+
+
+def _registry_path(request: Request) -> Path:
+    cfg = request.app.state.cfg.voices
+    if not cfg.registry:
+        raise HTTPException(404, "реестр голосов не настроен (voices.registry)")
+    return Path(cfg.registry)
+
+
+@router.post("/voices/identify")
+async def identify(request: Request) -> dict:
+    """Кто это говорит: отпечатки голосов записи → номера корпуса.
+
+    Зовёт машина, которая расшифровала запись у себя: у неё свой счёт голосов, и подписывать по
+    нему нельзя — её `Speaker_3` не наш. Право то же, что у загрузки записи (`ingest`): узнавание
+    и есть часть приёма, а отдельной «регистрации голоса» не существует — регистрировать без
+    отпечатка нечего.
+
+    `dry: true` — только показать карту: узнавание иначе занимает номера под запись, которую
+    могли и не принять.
+    """
+    require(request, "ingest")
+    path = _registry_path(request)
+    cfg = request.app.state.cfg.voices
+    body = await request.json()
+    voices = (body or {}).get("voices") if isinstance(body, dict) else None
+    if not isinstance(voices, dict) or not voices:
+        raise HTTPException(400, "нужны отпечатки: {\"voices\": {\"Speaker_0\": {\"centroid\": [...], \"air_sec\": 12.3}}}")
+    dry = bool((body or {}).get("dry"))
+    try:
+        mapping, report = registry.identify(
+            path, voices, episode=str((body or {}).get("episode") or ""),
+            threshold=cfg.match_threshold, suspect=cfg.suspect_threshold,
+            short_air_sec=cfg.short_air_min * 60, max_centroids=cfg.max_centroids, dry=dry)
+    except registry.RegistryError as error:
+        raise HTTPException(503, str(error)) from None
+    log.info("узнавание %s%s: %s", (body or {}).get("episode") or "—", " (предпросмотр)" if dry else "",
+             ", ".join(f"{r['from']}→{r['to']} ({r['how']})" for r in report))
+    return {"map": mapping, "report": report, "dry": dry}
+
+
+@router.get("/voices/registry")
+async def registry_stats(request: Request) -> dict:
+    """Состояние реестра: сколько голосов, следующий номер, когда менялся. Векторов не отдаёт."""
+    require(request, "ingest")
+    try:
+        return registry.stats(_registry_path(request))
+    except registry.RegistryError as error:
+        raise HTTPException(503, str(error)) from None
 
 
 @router.post("/voices/{voice}")

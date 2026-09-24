@@ -34,6 +34,8 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import registry
+
 log = logging.getLogger(__name__)
 
 REPO = Path(__file__).resolve().parents[2]
@@ -46,7 +48,8 @@ ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-[a-z0-9-]{1,120}$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 VIDEO_EXT = ("mp4", "webm", "mov", "mkv")
 # Что принимаем в стейджинг — и ничего другого: имя файла приходит из URL, а пишем мы на диск.
-FILES = ("artifact.json", "record.slides.json", "record.refs.json", "record.annotations.json",
+VOICEPRINTS = "voices.json"   # отпечатки голосов записи: по ним сервер узнаёт, кто говорит
+FILES = ("artifact.json", "voices.json", "record.slides.json", "record.refs.json", "record.annotations.json",
          "slides.zip", "slides.pdf") + tuple(f"video.{ext}" for ext in VIDEO_EXT)
 # Сайдкары экрана — переезжают в каталог записи как есть; в `refs` есть метки голосов — их тоже сдвигаем.
 SIDECARS = ("record.slides.json", "record.refs.json", "record.annotations.json")
@@ -107,8 +110,11 @@ def validate(raw: dict, family: Path) -> Manifest:
         raise Refused("дата — в виде YYYY-MM-DD")
     event = str(raw.get("event") or "").strip()
     allowed = events_of(family)
+    if allowed and not event:
+        raise Refused("не указана рубрика — она решает, в какую ветку и год ляжет запись; "
+                      f"выберите одну из: {', '.join(allowed)}")
     if allowed and event not in allowed:
-        raise Refused(f"рубрика «{event or '—'}» не разложится по веткам; допустимые: {', '.join(allowed)}")
+        raise Refused(f"рубрика «{event}» не разложится по веткам; допустимые: {', '.join(allowed)}")
     tags = [str(t).strip() for t in (raw.get("tags") or []) if str(t).strip()][:20]
     speakers = [str(t).strip() for t in (raw.get("speakers") or []) if str(t).strip()][:20]
     summary = str(raw.get("summary") or "").strip()[:2000]
@@ -126,6 +132,21 @@ def validate(raw: dict, family: Path) -> Manifest:
 
 def accept_name(name: str) -> bool:
     return name in FILES
+
+
+def remap_speakers(text: str, mapping: dict[str, str], default: str = "") -> str:
+    """`Speaker_N` → то, что сказал реестр. Тот же приём, что у сдвига: регэксп по тексту JSON.
+
+    ⚠️ ОДИН проход со словарём, а не цепочка замен: узнавание возвращает перестановки
+    (`Speaker_0 → Speaker_5`, `Speaker_5 → Speaker_0`), и последовательные замены схлопнули бы
+    два голоса в один — молча и необратимо.
+
+    ⚠️ Метка, которой нет в карте, — это голос без отпечатка: CAM++ пропускает кластеры, где нет
+    ни одного куска длиннее двух секунд. Оставить её как есть нельзя (чужой `Speaker_5` столкнулся
+    бы с корпусным), поэтому она уходит `default` — самому длинному голосу записи, ровно как
+    делает конвейер с кластерами без центроида.
+    """
+    return SPEAKER_RE.sub(lambda m: mapping.get(m.group(0)) or default or m.group(0), text)
 
 
 def shift_speakers(text: str, base: int) -> str:
@@ -207,8 +228,11 @@ class Staging:
                     missing.append("artifact.json: нет x_enriched.markdown или words.turns — это не артефакт адаптера")
             except (ValueError, AttributeError):
                 missing.append("artifact.json: не JSON")
-        if not (d / m.video).is_file() and not (d / "shift.json").is_file():
-            missing.append(m.video)   # после первого приёма видео уже в архиве — не требуем
+        # ⚠️ Признак «уже принимали» — ЛЮБОЕ из двух решений о голосах: узнавание (`identity.json`)
+        # или сдвиг (`shift.json`). Забыть про второе значит отвечать «не хватает видео» на
+        # штатный повторный приём — а видео к тому времени уже в архиве.
+        if not (d / m.video).is_file() and not _accepted_before(d):
+            missing.append(m.video)
         return missing
 
     def next_base(self) -> int:
@@ -219,6 +243,63 @@ class Staging:
             current = int(json.loads(counter.read_text(encoding="utf-8")).get("next", self.base))
         counter.write_text(json.dumps({"next": current + self.step}), encoding="utf-8")
         return current
+
+
+def _accepted_before(d: Path) -> bool:
+    """Запись уже проходила приём: решение о номерах голосов принято и лежит рядом."""
+    return (d / "identity.json").is_file() or (d / "shift.json").is_file()
+
+
+def _voice_note(d: Path) -> str:
+    """Одной строкой: узнали голоса или развели по диапазону. Идёт в лог и в `done.json`."""
+    identity = d / "identity.json"
+    if identity.is_file():
+        try:
+            report = json.loads(identity.read_text(encoding="utf-8")).get("report") or []
+        except ValueError:
+            return "голоса узнаны"
+        known = sum(1 for r in report if r.get("how") == "matched")
+        return f"голоса узнаны: знакомых {known} из {len(report)}"
+    shifted = d / "shift.json"
+    if shifted.is_file():
+        try:
+            base = json.loads(shifted.read_text(encoding="utf-8")).get("base")
+        except ValueError:
+            base = None
+        return f"голоса не опознаны, номера от Speaker_{base}" if base is not None else "голоса не опознаны"
+    return "голоса не трогали"
+
+
+def _air_of(d: Path, label: str) -> float:
+    """Сколько этот голос говорил — из отпечатков пакета. Нужен, чтобы выбрать, кому отдать
+    метки без отпечатка (самому длинному голосу записи, как делает конвейер)."""
+    try:
+        prints = json.loads((d / VOICEPRINTS).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0.0
+    return float((prints.get(label) or {}).get("air_sec") or 0)
+
+
+def _voice_ids(staging: Staging, d: Path, rid: str, voices) -> tuple[dict[str, str], list[dict]]:
+    """Карта «метка чужой машины → номер корпуса» от реестра. Пусто — узнавать нечем.
+
+    Отказ реестра НЕ роняет приём: запись важнее имён, и запасной ход (сдвиг) оставляет её
+    пригодной — голоса просто останутся безымянными, как раньше.
+    """
+    path = Path(voices.registry) if voices and voices.registry else None
+    prints = d / VOICEPRINTS
+    if not path or not prints.is_file():
+        return {}, []
+    try:
+        data = json.loads(prints.read_text(encoding="utf-8"))
+        return registry.identify(path, data, episode=rid, threshold=voices.match_threshold,
+                                 suspect=voices.suspect_threshold,
+                                 short_air_sec=voices.short_air_min * 60,
+                                 max_centroids=voices.max_centroids)
+    except (OSError, ValueError, registry.RegistryError) as error:
+        log.warning("не удалось узнать голоса записи %s: %s — номера уйдут в отдельный диапазон",
+                    rid, error)
+        return {}, []
 
 
 async def _run(argv: list[str], cwd: Path, subst: dict[str, str], env: dict[str, str] | None = None) -> str:
@@ -251,10 +332,13 @@ def llm_env_of(state) -> dict[str, str]:
 
 
 async def accept(staging: Staging, rid: str, *, family: Path, cfg, root: Path,
-                 llm_env: dict[str, str] | None = None) -> Path:
+                 llm_env: dict[str, str] | None = None, voices=None) -> Path:
     """Стейджинг → запись в корпусе. Порядок важен и записан:
 
-    1. номера голосов — в свой диапазон (артефакт и `refs`);
+    1. КТО ГОВОРИТ — по отпечаткам голосов у реестра сервера (`voices.json` в пакете):
+       знакомый получает свой корпусный номер, незнакомый заводится. Нет отпечатков или реестр
+       выключен — прежний запасной ход: номера сдвигаются в отдельный диапазон, чтобы чужой
+       `Speaker_3` не подписался именем нашего;
     2. видео — в архив (`<archive>/<video_dir>/<id>.<ext>`), в шапке — путь внутри архива,
        как у всех записей (плеер играет через `media_base`);
     3. мета из манифеста (докладчики `from: upload`, кто загрузил) — рядом с артефактом, как
@@ -269,28 +353,51 @@ async def accept(staging: Staging, rid: str, *, family: Path, cfg, root: Path,
     m = staging.manifest(rid)
     staging.set_status(rid, "building")
     try:
-        # Сдвиг номеров — ровно один раз: повторный приём после сбоя (сеть, диск) не должен
-        # сдвинуть их второй раз и развести артефакт с `refs`. Диапазон запоминается рядом.
-        shifted = d / "shift.json"
+        # Номера голосов переписываются РОВНО ОДИН РАЗ: повторный приём после сбоя (сеть, диск)
+        # не должен переписать их второй раз и развести артефакт с `refs`. Решение запоминается
+        # рядом — в `identity.json` (узнали по отпечаткам) или в `shift.json` (запасной ход).
         src = d / f"{rid}.json"   # артефакт под именем записи: `make_record` возьмёт мету из `<stem>.meta.json`
-        if shifted.is_file():
-            base = int(json.loads(shifted.read_text(encoding="utf-8"))["base"])
-        else:
-            base = staging.next_base()
+        done_before = _accepted_before(d)
+        if not done_before:
+            mapping, report = _voice_ids(staging, d, rid, voices)
             art = d / "artifact.json"
-            art.write_text(shift_speakers(art.read_text(encoding="utf-8"), base), encoding="utf-8")
-            refs = d / "record.refs.json"
-            if refs.is_file():
-                refs.write_text(shift_speakers(refs.read_text(encoding="utf-8"), base), encoding="utf-8")
+            if mapping:
+                default = mapping.get(max(mapping, key=lambda k: _air_of(d, k)), "")
+                art.write_text(remap_speakers(art.read_text(encoding="utf-8"), mapping, default),
+                               encoding="utf-8")
+                refs = d / "record.refs.json"
+                if refs.is_file():
+                    refs.write_text(remap_speakers(refs.read_text(encoding="utf-8"), mapping, default),
+                                    encoding="utf-8")
+                (d / "identity.json").write_text(json.dumps({"map": mapping, "report": report},
+                                                            ensure_ascii=False), encoding="utf-8")
+                log.info("голоса записи %s: %s", rid, ", ".join(
+                    f"{r['from']}→{r['to']} ({r['how']})" for r in report))
+            else:
+                base = staging.next_base()
+                art.write_text(shift_speakers(art.read_text(encoding="utf-8"), base), encoding="utf-8")
+                refs = d / "record.refs.json"
+                if refs.is_file():
+                    refs.write_text(shift_speakers(refs.read_text(encoding="utf-8"), base), encoding="utf-8")
+                (d / "shift.json").write_text(json.dumps({"base": base}), encoding="utf-8")
             art.rename(src)
-            shifted.write_text(json.dumps({"base": base}), encoding="utf-8")
 
         media = ""
         archive = Path(cfg.archive) if cfg.archive else None
         if archive:
             ext = m.video.rsplit(".", 1)[-1]
             target = archive / cfg.video_dir / f"{rid}.{ext}"
-            target.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as error:
+                # ⚠️ Архив обычно принадлежит не тому, под кем работает сайт (у нас его наполнял
+                # WordPress под www-data), и каталог под загрузки сайт создать не может. Отказ
+                # прилетает ПОСЛЕ заливки всего видео, поэтому он обязан называть лечение, а не
+                # только errno: ловилось 24.09 на первой живой загрузке.
+                raise RuntimeError(
+                    f"не могу создать каталог загрузок {target.parent}: {error}. "
+                    "Каталог архива принадлежит другому пользователю — заведите его под тем, "
+                    "под кем работает сайт (у нас это root-шаг `root-steps.sh uploads`)") from None
             if (d / m.video).is_file():
                 shutil.move(str(d / m.video), str(target))
             elif not target.is_file():
@@ -349,13 +456,18 @@ async def accept(staging: Staging, rid: str, *, family: Path, cfg, root: Path,
             except RuntimeError as error:
                 log.warning("приём %s: шаг после сборки не удался: %s", rid, error)
 
+        voice_note = _voice_note(d)
         (d / "done.json").write_text(json.dumps({"record_dir": str(record_dir), "media": media,
-                                                 "speaker_base": base, "at": time.time()}), encoding="utf-8")
+                                                 "voices": voice_note, "at": time.time()},
+                                                ensure_ascii=False), encoding="utf-8")
+        # ⚠️ Решение о номерах голосов (`identity.json`/`shift.json`) переживает уборку: по нему
+        # повторный приём не перенумеровывает запись, а человек видит, узнали голоса или нет.
         for leftover in d.iterdir():
-            if leftover.name not in ("manifest.json", "status.json", "done.json", "shift.json"):
+            if leftover.name not in ("manifest.json", "status.json", "done.json", "shift.json",
+                                     "identity.json"):
                 leftover.unlink()
         staging.set_status(rid, "indexing" if cfg.index else "done", record=str(record_dir.name))
-        log.info("принята запись %s → %s (голоса от Speaker_%d)", rid, record_dir, base)
+        log.info("принята запись %s → %s (%s)", rid, record_dir, voice_note)
         return record_dir
     except Exception as error:
         staging.set_status(rid, "error", error=str(error)[-800:])

@@ -120,6 +120,9 @@
       "sha256": "e4c4788e64eadd844fb846b5b1d92bcd8c566491a0b4a9488e9fcf881ad41bf9",
       "from": "app/content/episodes.py"
     },
+    "app/content/registry.py": {
+      "status": "ours"
+    },
     "app/content/resolve.py": {
       "status": "edited",
       "sha256": "f14ef9a0dff3d8b65af8f9fd5d594ead658cefeb73ce5669e63cda0337c92bf9"
@@ -374,6 +377,9 @@
       "status": "edited",
       "sha256": "c81d2d48f30ea7165e2e8347ead6a196338670a2dc7d1c452ad21525360e615c"
     },
+    "tests/test_registry.py": {
+      "status": "ours"
+    },
     "tests/test_resolve.py": {
       "status": "ours"
     },
@@ -387,6 +393,9 @@
       "status": "ours"
     },
     "tests/test_video_slides.py": {
+      "status": "ours"
+    },
+    "tests/test_voiceprints.py": {
       "status": "ours"
     },
     "tests/test_voices.py": {
@@ -415,6 +424,12 @@
       "status": "ours"
     },
     "tools/video_batch.py": {
+      "status": "ours"
+    },
+    "tools/voiceprints.py": {
+      "status": "ours"
+    },
+    "tools/voices_assign.py": {
       "status": "ours"
     },
     "web/assets/fonts/mono-cyr-400.woff2": {

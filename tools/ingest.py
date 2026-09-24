@@ -19,7 +19,8 @@
      (`~/morag-ingest/family`) — на сайт эта сборка не едет, едет сырой артефакт;
   3. пакет уезжает на сайт под вашей учёткой (`/api/ingest`): манифест, артефакт, сайдкары
      экрана, кадры, слайды, видео (последним, с прогрессом); сервер собирает запись с
-     настоящими словарями и раскладкой, индексирует и отвечает адресом.
+     настоящими словарями и раскладкой и отвечает адресом. Индексация — отдельно и планово:
+     ждать её человеку незачем, запись читается на сайте сразу.
 
 Голоса в записи приедут безымянными (`Speaker_N`): у вашей машины свой реестр голосов, и на
 сайте их называют потом — «Это я» у своего голоса, карточка голоса у остальных. Категория и
@@ -172,6 +173,9 @@ def save_session(site: str, cookies: dict[str, str]) -> None:
 
 
 TRANSPORT: httpx.BaseTransport | None = None   # тесты подменяют сайт и адаптер
+# Когда принятая запись попадёт в поиск — «now» или «later» (плановая индексация). Сервер
+# говорит это в статусе; окно показывает в карточке «готово», чтобы не обещать лишнего.
+LAST_SEARCH = ""
 
 
 def client(site: str, cookies: dict[str, str], timeout=60.0) -> httpx.Client:
@@ -259,13 +263,90 @@ def stack_health() -> dict:
         return {}
 
 
-def stack(command: str) -> None:
+def stack(command: str, *, check: bool = True) -> None:
+    """Поднять или погасить стек транскрибации.
+
+    ⚠️ `check=False` для гашения — и это не мелочь. `stack.sh down` возвращает 1, если последний
+    порт уже свободен (последняя строка функции — ложная проверка `[[ -n … ]] &&`), а гасим мы в
+    `finally`: исключение из уборки ЗАМЕНЯЕТ настоящую ошибку. Ловилось 24.09 живьём — человек
+    увидел «CalledProcessError: stack.sh down», а на деле не стартовал адаптер.
+    """
     script = MORAG_REPO / "services" / "asr-adaptor" / "deploy" / "mac" / "stack.sh"
     if not script.is_file():
         raise Step(f"нет {script}: чекаут morag ожидается рядом (MORAG_REPO) — см. ingest-install.sh")
     env = {**os.environ, "ASR_STACK_ENV": str(STACK_ENV)}
     say(f"стек: {command}")
-    subprocess.run([str(script), command], check=True, env=env)
+    done = subprocess.run([str(script), command], check=check, env=env)
+    if done.returncode and not check:
+        say(f"  (гашение вернуло {done.returncode} — не страшно, порты свободны)")
+
+
+def stack_trouble() -> str:
+    """Почему стек не поднялся — последняя внятная строка логов бэкендов.
+
+    Без неё человек видит «стек не отвечает» и идёт спрашивать; с ней он видит «Missing
+    credentials» и понимает, что не настроен ключ. Логи пишет сам `stack.sh` (`$STACK/logs`).
+    """
+    logs = Path(os.environ.get("ASR_STACK_HOME") or STACK_HOME) / "logs"
+    out = []
+    for name in ("adaptor", "diarizer", "whisper", "campp"):
+        path = logs / f"{name}.log"
+        if not path.is_file():
+            continue
+        tail = [x.strip() for x in path.read_text(encoding="utf-8", errors="replace").splitlines()[-40:]]
+        bad = [x for x in tail if ("Error" in x or "error:" in x.lower()) and "INFO" not in x]
+        if bad:
+            out.append(f"{name}: {bad[-1][:200]}")
+    return "; ".join(out)
+
+
+def ensure_gateway() -> None:
+    """Перед подъёмом стека убедиться, что стадиям с ИИ есть куда ходить.
+
+    ⚠️ Без ключа адаптер не просто теряет LLM-стадии — он НЕ СТАРТУЕТ вовсе (строит клиента на
+    импорте модуля), и снаружи это выглядит как «стек не отвечает» через две минуты ожидания.
+    Настройка через сайт делается при входе, но вход мог случиться раньше обновления — поэтому
+    проверяем здесь, у самой работы, и чиним молча.
+    """
+    if stack_env_value("OR_KEY"):
+        return
+    say("шлюз ещё не настроен — беру доступ у сайта…")
+    out = use_site_llm()
+    if not out.get("via_site") or not stack_env_value("OR_KEY"):
+        raise Step("нечем ходить в LLM-шлюз: войдите на сайт в настройках приложения "
+                   "(или впишите свой ключ — «У меня свой ключ»)")
+
+
+def voiceprint(work: Path, artifact: Path) -> Path | None:
+    """Отпечатки голосов записи — чтобы сервер узнал, КТО говорит, а не выдавал незнакомцев.
+
+    Считает CAM++ из того же стека (он ещё поднят после расшифровки); 192 числа на голос.
+    ⚠️ Шаг необязательный и загрузку не роняет: не ответил CAM++ — пакет уедет без отпечатков, и
+    сервер разведёт номера по отдельному диапазону, как делал раньше. Потерять запись из-за
+    неузнанных голосов было бы куда хуже.
+    """
+    out = work / "voices.json"
+    if out.is_file() and out.stat().st_size:
+        say("отпечатки голосов уже есть — пропускаю")
+        return out
+    audio = work / "audio.mp3"
+    if not audio.is_file():
+        return None
+    try:
+        import voiceprints   # noqa: PLC0415 — нужен только здесь
+
+        url = stack_env_value("ASR_CAMPP_URL") or voiceprints.DEFAULT_URL
+        prints = voiceprints.fingerprints(artifact, audio, url=url,
+                                          key=stack_env_value("ASR_CAMPP_KEY"), work=work)
+    except Exception as error:  # noqa: BLE001 — любая осечка здесь не повод терять запись
+        say(f"  отпечатки голосов не посчитались ({type(error).__name__}: {str(error)[:120]}) — "
+            "голоса приедут безымянными")
+        return None
+    if not prints:
+        return None
+    out.write_text(json.dumps(prints, ensure_ascii=False), encoding="utf-8")
+    say(f"отпечатки голосов: {len(prints)} — сервер узнает знакомых")
+    return out
 
 
 def transcribe(work: Path, video: Path, rid: str, title: str, speakers: list[str]) -> Path:
@@ -274,7 +355,9 @@ def transcribe(work: Path, video: Path, rid: str, title: str, speakers: list[str
         say("транскрибация уже есть — пропускаю")
         return artifact
     if not stack_health():
-        raise Step(f"стек транскрибации не отвечает на {ASR_BASE}/health — поднимите `stack.sh up` или запустите с --stack")
+        why = stack_trouble()
+        raise Step(f"стек транскрибации не отвечает на {ASR_BASE}/health"
+                   + (f" — {why}" if why else " — поднимите `stack.sh up` или запустите с --stack"))
     audio = work / "audio.mp3"
     ffmpeg_audio(video, audio)
     hints = json.dumps({"about": title, "names": speakers, "terms": []}, ensure_ascii=False)
@@ -338,7 +421,8 @@ def local_record(work: Path, artifact: Path, rid: str, title: str, date: str) ->
     src = fam / "inbox" / f"{rid}.json"
     shutil.copy2(artifact, src)
     env = {**os.environ, "MORAG_WEB_CORPUS": str(fam)}
-    say("локальная сборка записи (для привязки обращений к экрану)")
+    say("черновик записи — по нему обращения «вот здесь» привязываются к экрану "
+        "(видео и настоящая запись собираются на сервере)")
     subprocess.run([sys.executable, str(HERE / "make_record.py"), str(src), "--id", rid, "--title", title,
                     "--date", date, "--no-media"], check=True, env=env, cwd=str(REPO))
     if not (record / "record.words.json").is_file():
@@ -437,7 +521,7 @@ def upload(work: Path, site: str, cookies: dict[str, str], manifest: dict, files
         r = c.post(f"/api/ingest/{rid}/finish")
         if r.status_code != 200:
             raise Step(f"приём не запустился ({r.status_code}): {r.json().get('detail', r.text)}")
-        say(f"пакет принят, сервер собирает запись {rid}" + (" и индексирует" if wait else ""))
+        say(f"пакет принят, сервер собирает запись {rid}")
         if not wait:
             return rid
         seen = ""
@@ -449,6 +533,9 @@ def upload(work: Path, site: str, cookies: dict[str, str], manifest: dict, files
                 say(f"  сервер: {seen}")
             if seen == "done":
                 say(f"готово: {site}{s.get('url') or ''}")
+                globals()["LAST_SEARCH"] = s.get("search") or ""
+                if s.get("search") == "later":
+                    say("  (в поиске запись появится после ближайшей плановой индексации — обычно ночью)")
                 return rid
             if seen == "error":
                 raise Step(f"сервер не принял запись: {s.get('error')}")
@@ -496,21 +583,25 @@ def pipeline(video: Path, *, title: str, date: str, event: str = "", speakers: l
     stack_started = False
     try:
         if with_stack and not (work / "artifact.json").is_file() and not stack_health():
+            ensure_gateway()
             stack("up")
             stack_started = True
         artifact = transcribe(work, video, rid, title, speakers)
+        voiceprint(work, artifact)
         if with_screen:
             record = local_record(work, artifact, rid, title, date)
             screen(work, video, record)
     finally:
         if stack_started:
-            stack("down")
+            stack("down", check=False)
 
     manifest = {"title": title, "date": date, "event": event or "", "tags": tags,
                 "summary": summary or "", "speakers": speakers, "video": f"video.{ext}",
                 # «название подставилось само» — чтобы сервер знал, можно ли его переписать
                 "title_auto": bool(title_auto)}
     files: list[tuple[str, Path]] = [("artifact.json", artifact)]
+    if (work / "voices.json").is_file():
+        files.append(("voices.json", work / "voices.json"))
     files += [(name, work / name) for name in SIDECARS if (work / name).is_file()]
     if (work / "slides.zip").is_file():
         files.append(("slides.zip", work / "slides.zip"))

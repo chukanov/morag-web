@@ -135,3 +135,64 @@ def test_refusals_are_messages_not_tracebacks(env, capsys):
     ingest.SESSION.unlink()
     sys.argv = ["ingest.py", "run", str(video), "--title", "Норм", "--date", "2026-03-12", "--no-screen"]
     assert ingest.main() == 1 and "login" in capsys.readouterr().out
+
+
+# --- стек: уборка не врёт, а ошибка называет причину ------------------------------------
+
+def test_shutting_the_stack_down_never_masks_the_real_error(tmp_path, monkeypatch):
+    """⚠️ Живой случай 24.09: расшифровка упала, а человек увидел «CalledProcessError: stack.sh
+    down». Гасим мы в `finally`, и исключение из УБОРКИ заменяет настоящую ошибку; сам `down`
+    вдобавок возвращает 1, когда последний порт уже свободен (баг в `stack.sh` движка)."""
+    script = tmp_path / "morag" / "services" / "asr-adaptor" / "deploy" / "mac" / "stack.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    script.chmod(0o755)
+    monkeypatch.setattr(ingest, "MORAG_REPO", tmp_path / "morag")
+
+    with pytest.raises(Exception):
+        ingest.stack("up")                      # обычный вызов по-прежнему кричит
+    ingest.stack("down", check=False)           # а уборка молчит и не роняет
+
+
+def test_a_dead_stack_says_why_and_not_just_that(tmp_path, monkeypatch):
+    """«Стек не отвечает» человеку ничего не говорит. Настоящая причина лежит в логах бэкендов —
+    в живом случае это было «Missing credentials» у адаптера (пустой ключ шлюза)."""
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "adaptor.log").write_text(
+        "INFO: старт\nTraceback (most recent call last):\n"
+        "openai.OpenAIError: Missing credentials. Please pass an `api_key`\n", encoding="utf-8")
+    (logs / "whisper.log").write_text("INFO:     Application startup complete.\n", encoding="utf-8")
+    monkeypatch.setenv("ASR_STACK_HOME", str(tmp_path))
+    why = ingest.stack_trouble()
+    assert "adaptor" in why and "Missing credentials" in why
+    assert "whisper" not in why, "у здорового бэкенда жаловаться не на что"
+
+
+def test_gateway_is_configured_before_work_not_only_at_login(tmp_path, monkeypatch):
+    """⚠️ Вход мог случиться ДО обновления приложения — тогда шлюз остался ненастроенным, а
+    адаптер без ключа не стартует вовсе (строит клиента на импорте). Проверяем у самой работы."""
+    env_file = tmp_path / "asr.env"
+    env_file.write_text("OR_KEY=\n", encoding="utf-8")
+    monkeypatch.setenv("ASR_STACK_ENV", str(env_file))
+    monkeypatch.delenv("OR_KEY", raising=False)
+    called: list[str] = []
+
+    def fake_use_site_llm():
+        called.append("да")
+        ingest.set_stack_env(OR_KEY="сессия-сайта")
+        return {"via_site": True, "checked": True}
+
+    monkeypatch.setattr(ingest, "use_site_llm", fake_use_site_llm)
+    ingest.ensure_gateway()
+    assert called == ["да"] and ingest.stack_env_value("OR_KEY") == "сессия-сайта"
+
+    called.clear()
+    ingest.ensure_gateway()
+    assert called == [], "уже настроено — второй раз к сайту не ходим"
+
+    monkeypatch.setattr(ingest, "use_site_llm", lambda: {"via_site": False})
+    monkeypatch.setenv("ASR_STACK_ENV", str(tmp_path / "пусто.env"))
+    monkeypatch.delenv("OR_KEY", raising=False)
+    with pytest.raises(ingest.Step, match="шлюз"):
+        ingest.ensure_gateway()

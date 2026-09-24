@@ -100,6 +100,16 @@ def live(tmp_path, monkeypatch):
             cfg.enabled = False
 
 
+def test_status_says_when_the_record_reaches_search(live):
+    """⚠️ Индексация на сервере может идти планово (ночью, оптом — решение владельца 24.09), и
+    тогда ждать её человеку незачем: запись читается сразу. Клиент должен знать, что обещать."""
+    c, _, _, _ = live
+    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    assert c.get(f"/api/ingest/{rid}").json()["search"] == "now", "команда индексации задана — ждём"
+    c.app.state.cfg.ingest.index = []
+    assert c.get(f"/api/ingest/{rid}").json()["search"] == "later", "индексации по приёму нет — не обещаем"
+
+
 def manifest(**over) -> dict:
     return {"title": "Kafka без боли", "date": "2026-03-12", "video": "talk.mp4",
             "speakers": ["Мария Кузнецова"], "summary": "Про очереди.", **over}
@@ -167,6 +177,124 @@ def test_end_to_end_upload_builds_a_record_with_shifted_voices(live):
     ids = {r["id"] for r in c.get("/api/records", params={"slug": "demo"}).json()["records"]}
     assert rid in ids, "индекс записей увидел новую без рестарта"
     assert c.post("/api/ingest", json=manifest()).status_code == 409, "второй раз ту же — нельзя"
+
+
+def vec(seed: int) -> list[float]:
+    """Отпечаток голоса: случайное направление в 192 измерениях (как у CAM++)."""
+    import math
+    import random
+
+    rng = random.Random(seed)
+    raw = [rng.gauss(0, 1) for _ in range(192)]
+    norm = math.sqrt(sum(x * x for x in raw))
+    return [x / norm for x in raw]
+
+
+def with_registry(c, tmp_path, **voices):
+    """Включить узнавание голосов и положить в реестр перечисленные голоса."""
+    import json as _json
+
+    from app.content import registry
+
+    path = tmp_path / "registry.json"
+    reg = {"version": 1, "next_id": 0, "speakers": {}}
+    for sid, (seed, name) in voices.items():
+        reg["speakers"][sid] = {"centroids": [vec(seed)], "provenance": [], "name": name}
+        reg["next_id"] = max(reg["next_id"], int(sid) + 1)
+    path.write_text(_json.dumps(reg), encoding="utf-8")
+    c.app.state.cfg.voices.registry = str(path)
+    return path, registry
+
+
+def test_a_known_voice_keeps_its_corpus_number(live, tmp_path):
+    """⚠️ Главное ради чего всё: у записи с чужой машины голос, который корпус уже знает, должен
+    получить СВОЙ номер, а не «незнакомца» из отдельного диапазона. Ловилось живьём 24.09 —
+    в загруженной записи оказались двое известных корпусу людей под номерами 100001 и 100002."""
+    c, demo, archive, marker = live
+    path, _ = with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
+    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    upload_all(c, rid)
+    prints = {"Speaker_3": {"centroid": vec(7), "air_sec": 640.0}}
+    assert c.put(f"/api/ingest/{rid}/files/voices.json",
+                 content=json.dumps(prints).encode()).status_code == 200
+    assert c.post(f"/api/ingest/{rid}/finish").status_code == 200
+    assert wait(c, rid)["state"] == "done"
+
+    text = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
+    assert "Speaker_19" in text and "Speaker_100003" not in text, "узнали, а не развели по диапазону"
+    refs = json.loads((demo / "records" / rid / "record.refs.json").read_text(encoding="utf-8"))
+    assert refs["refs"][0]["speaker"] == "Speaker_19", "ссылки экрана уехали вместе с голосом"
+    reg = json.loads(path.read_text(encoding="utf-8"))
+    assert len(reg["speakers"]) == 1, "знакомый голос не завёл второй номер"
+    assert len(reg["speakers"]["19"]["centroids"]) == 2, "реестр обогатился отпечатком записи"
+
+
+def test_an_unknown_voice_is_registered_once(live, tmp_path):
+    c, demo, archive, marker = live
+    path, _ = with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
+    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    upload_all(c, rid)
+    prints = {"Speaker_3": {"centroid": vec(555), "air_sec": 640.0}}
+    c.put(f"/api/ingest/{rid}/files/voices.json", content=json.dumps(prints).encode())
+    c.post(f"/api/ingest/{rid}/finish")
+    wait(c, rid)
+    text = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
+    assert "Speaker_20" in text, "незнакомец получил следующий номер корпуса, а не 100000+"
+    reg = json.loads(path.read_text(encoding="utf-8"))
+    assert reg["next_id"] == 21 and set(reg["speakers"]) == {"19", "20"}
+
+
+def test_a_swap_of_numbers_does_not_collapse_two_voices(live, tmp_path):
+    """⚠️ Узнавание возвращает ПЕРЕСТАНОВКИ: `Speaker_3 → Speaker_0`, `Speaker_0 → Speaker_3`.
+    Последовательные замены схлопнули бы обоих в одного — молча и необратимо."""
+    from app.content.ingest import remap_speakers
+
+    text = json.dumps({"markdown": "[Speaker_0] раз\n[Speaker_3] два", "speaker_map": {"SPEAKER_00": "Speaker_3"}},
+                      ensure_ascii=False)
+    out = remap_speakers(text, {"Speaker_0": "Speaker_3", "Speaker_3": "Speaker_0"})
+    assert "[Speaker_3] раз" in out and "[Speaker_0] два" in out, "голоса поменялись местами"
+    assert '"SPEAKER_00": "Speaker_0"' in out, "карта диаризатора уехала вместе с ними"
+    import re as _re
+    assert sorted(set(_re.findall(r"Speaker_\d+", out))) == ["Speaker_0", "Speaker_3"], "никто не схлопнулся"
+
+
+def test_a_voice_without_a_fingerprint_goes_to_the_loudest(live, tmp_path):
+    """CAM++ пропускает кластеры без куска длиннее двух секунд — у такой метки отпечатка нет.
+    Оставить её как есть нельзя: чужой `Speaker_5` столкнулся бы с корпусным."""
+    from app.content.ingest import remap_speakers
+
+    text = json.dumps({"markdown": "[Speaker_0] раз\n[Speaker_9] реплика без отпечатка"}, ensure_ascii=False)
+    out = remap_speakers(text, {"Speaker_0": "Speaker_19"}, default="Speaker_19")
+    assert "[Speaker_19] раз" in out and "[Speaker_19] реплика" in out
+    assert "Speaker_9" not in out
+
+
+def test_repeat_accept_does_not_renumber(live, tmp_path):
+    c, demo, archive, marker = live
+    with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
+    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    upload_all(c, rid)
+    c.put(f"/api/ingest/{rid}/files/voices.json",
+          content=json.dumps({"Speaker_3": {"centroid": vec(7), "air_sec": 640.0}}).encode())
+    c.post(f"/api/ingest/{rid}/finish")
+    wait(c, rid)
+    before = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
+    assert c.post(f"/api/ingest/{rid}/finish").status_code == 200, "повторный приём — штатный"
+    wait(c, rid)
+    assert (demo / "records" / rid / "record.md").read_text(encoding="utf-8") == before
+
+
+def test_without_fingerprints_the_old_shift_still_works(live, tmp_path):
+    """Старый клиент или молчащий CAM++ — запись всё равно принимается, просто голоса
+    безымянные: приём важнее имён."""
+    c, demo, archive, marker = live
+    with_registry(c, tmp_path, **{"19": (7, "Мария Кузнецова")})
+    rid = c.post("/api/ingest", json=manifest()).json()["id"]
+    upload_all(c, rid)          # voices.json не кладём вовсе
+    c.post(f"/api/ingest/{rid}/finish")
+    wait(c, rid)
+    text = (demo / "records" / rid / "record.md").read_text(encoding="utf-8")
+    assert "Speaker_100003" in text
 
 
 def test_second_record_gets_the_next_speaker_range(live):
