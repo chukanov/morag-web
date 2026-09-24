@@ -87,6 +87,17 @@ export function textScene(root) {
     return node.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
   }
 
+  /** Пока текст ПИШЕТСЯ, окно держится КОНЦА, а не начала последнего куска.
+   *
+   * ⚠️ Прежде слежение выводило на середину окна НАЧАЛО куска — а кусок бывает в несколько
+   * строк, и самое свежее (то, ради чего смотрят) оказывалось ниже края. Здесь нужно
+   * поведение ленты: новое приходит снизу, окно его догоняет.
+   */
+  function toEnd() {
+    if (performance.now() < heldUntil) return;
+    body.scrollTop = body.scrollHeight;
+  }
+
   function follow(node) {
     // ⚠️ Без behavior:"smooth" — см. шапку файла.
     if (!node || performance.now() < heldUntil) return;
@@ -115,7 +126,7 @@ export function textScene(root) {
       if (tail) tail.textContent = pending.slice(0, typed);
       if (typed >= pending.length) { pending = ""; typed = 0; tail = null; }
       else more = true;
-      follow(body.lastElementChild);
+      toEnd();
     }
     if (jobs.length && now >= busy) { runFix(jobs.shift(), now); more = true; }
     if (jobs.length) more = true;
@@ -135,6 +146,7 @@ export function textScene(root) {
     tail = piece;
     pending = (raw || "").trim() + " ";
     typed = 0;
+    toEnd();          // кусок уже в разметке — показываем конец сразу, а не со следующего кадра
     pump();
   }
 

@@ -20,6 +20,7 @@ class El {
     // Минимальная геометрия: сцена листает окно текста, и проверяется именно то, что она
     // листает (сколько раз), а не куда: раскладки в заглушке нет и быть не может.
     this.clientHeight = 200;
+    this.scrollHeight = 900;      // текста больше, чем окно — иначе прокрутку не проверить
     this.scrolls = 0;
     this._scroll = 0;
     this._on = {};
@@ -256,6 +257,9 @@ const { textScene } = await import(join(repo, "tools/ui/text.js"));
   flush(60);
   const done = scene.state().text.length;
   assert.ok(first < mid && mid < done, `печать идёт кадрами: ${first} → ${mid} → ${done}`);
+  // ⚠️ Пишущийся текст сам держится КОНЦА: смотрят ради того, что появляется прямо
+  // сейчас, а оно приходит снизу.
+  assert.equal(root.children[1].scrollTop, 900, "окно догнало конец текста");
   assert.match(scene.state().text, /обычная очередь/);
   assert.equal(scene.state().mode, "writing");
 }
