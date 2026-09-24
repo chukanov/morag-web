@@ -13,33 +13,9 @@
 // тому, кто цвета различает плохо.
 
 import { el, reduced } from "./dom.js";
+import { colour, mix } from "./voices.js";
 
 const REVEAL_MS = 600;        // проявление ленты голосов: одно движение, не мигание
-
-/** Цветовой круг: 12 тонов по четыре кольца — от светлого к глубокому.
- *
- * Цвета сняты ПИКСЕЛЯМИ с круга, который дал владелец (24.09), а не сочинены формулой:
- * выведенные поворотом тона оттенки смотрелись бедно и плоско. Это ЕДИНСТВЕННОЕ место в окне со
- * своими цветами — здесь картинка, а не интерфейс; всё остальное по-прежнему токенами сайта.
- */
-const WHEEL = [
-  ["#BDB0D7", "#8671B2", "#622F92", "#4C1D73"],   //  0 фиолетовый
-  ["#9197C7", "#6D6CB1", "#2F4298", "#1F2E7A"],   //  1 сине-фиолетовый
-  ["#A9BCDE", "#5F8AC3", "#1F63A2", "#044A87"],   //  2 синий
-  ["#B2D8DE", "#5FC0C8", "#03AAB1", "#01838F"],   //  3 сине-зелёный
-  ["#BEDDD1", "#67C3A3", "#04A663", "#018A55"],   //  4 зелёный
-  ["#C2E2C6", "#AFD198", "#74BB61", "#589948"],   //  5 жёлто-зелёный
-  ["#F5F1CA", "#F5F58C", "#F1F02B", "#C5BC29"],   //  6 жёлтый
-  ["#FDEEC8", "#FCD388", "#F9AA1B", "#C48A10"],   //  7 жёлто-оранжевый
-  ["#F9DFC9", "#F5C57A", "#F59025", "#C36E17"],   //  8 оранжевый
-  ["#F9D1C3", "#F49677", "#ED4B3E", "#BD372F"],   //  9 красно-оранжевый
-  ["#F8C6C1", "#F48F76", "#ED2D31", "#BA1820"],   // 10 красный
-  ["#E2C0D4", "#D67EB3", "#A72290", "#87126F"],   // 11 красно-фиолетовый
-];
-// Голоса берут тоны не подряд, а ЧЕРЕЗ СЕМЬ (взаимно просто с 12): соседние по порядку
-// голоса оказываются на противоположных сторонах круга и не путаются. Начало — синий (владелец).
-const FIRST = 2;
-const STEP = 7;
 
 export function wave(root) {
   const canvas = el("canvas", { class: "wv-c" });
@@ -57,37 +33,6 @@ export function wave(root) {
   let raf = null;
 
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-  /** Разбор `#rrggbb` и смешение двух цветов — всё, что нужно для ступеней. */
-  function rgb(hex) {
-    const h = String(hex).trim().replace("#", "");
-    const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-    const n = parseInt(full, 16);
-    return Number.isFinite(n) && full.length === 6
-      ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : null;
-  }
-
-  function mix(a, b, t) {
-    const x = rgb(a);
-    const y = rgb(b);
-    if (!x || !y) return a;
-    const v = x.map((c, i) => Math.round(c + (y[i] - c) * t));
-    return `rgb(${v[0]} ${v[1]} ${v[2]})`;
-  }
-
-  /** Цвет голоса — ТОН с круга, один на весь голос.
-   *
-   * ⚠️ Ступеней по громкости больше НЕТ (владелец, 24.09: «цвета норм, не надо грубой
-   * лесенкой градиента»): дробление одного голоса на оттенки читалось как рябь, а громкость
-   * и так видна — высотой столбиков. Объём даёт ПЛАВНОЕ затенение к низу, а не смена цвета.
-   * На светлой теме берётся кольцо глубже: чистый тон на белом выцветает.
-   */
-  function colour(idx) {
-    const light = document.documentElement.getAttribute("data-theme") === "light";
-    const lap = Math.min(1, Math.floor(idx / WHEEL.length));
-    const tone = WHEEL[(FIRST + idx * STEP) % WHEEL.length];
-    return tone[Math.min(3, (light ? 3 : 2) - (light ? lap : -lap))];
-  }
 
   /** Вертикальный перелив от тона к его тени: плоская заливка смотрится бедно. */
   function shaded(ctx, idx, y0, y1) {
@@ -141,20 +86,12 @@ export function wave(root) {
         ? 1
         : Math.min(1, (performance.now() - revealFrom) / REVEAL_MS);
       const eased = 1 - (1 - done) ** 3;
-      // ⚠️ Между репликами — белая граница в два пикселя (владелец, 24.09): без неё соседние
-      // куски одного цвета сливаются в одно пятно и по ленте не видно, где менялись реплики.
-      // Шов в ОДИН экранный пиксель (владелец): в буфере это dpr точек, а не одна.
-      const seam = Math.max(1, Math.round(canvas.width / (canvas.clientWidth || canvas.width)));
       for (const [a, b, idx] of spans) {
         const x0 = (a / audioSec) * W;
         const x1 = Math.min((b / audioSec) * W, W * eased);
         if (x0 > W * eased) break;
         ctx.fillStyle = shaded(ctx, idx, ribbonY, ribbonY + ribbonH);
         ctx.fillRect(x0, ribbonY, Math.max(1, x1 - x0), ribbonH);
-        if (x0 > 0.5) {
-          ctx.fillStyle = "rgba(255,255,255,.92)";
-          ctx.fillRect(x0 - seam / 2, ribbonY, seam, ribbonH);
-        }
       }
       if (done < 1) dirty = true;
     }

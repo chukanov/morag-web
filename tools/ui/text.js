@@ -19,6 +19,7 @@
 // показ, зависящий от неё, просто стоял бы на месте.
 
 import { clock, el, reduced } from "./dom.js";
+import { colour } from "./voices.js";
 
 const TYPE_MS = 900;       // за столько печатается кусок, если не торопимся
 const HOLD_MS = 460;       // сколько слово подсвечено до замены — время заметить глазом
@@ -50,6 +51,11 @@ export function textScene(root) {
   root.append(head, body, count);
 
   let mode = "idle";
+  let speakers = [];         // метки голосов в порядке появления — тот же, что у ленты волны
+  let named = {};            // метка → имя, когда его узнал сайт
+  let badges = [];           // поставленные метки говорящего: их переписываем, когда придут имена
+  let lastSpk = null;        // кто говорил в предыдущем куске
+  let chunk = null;          // текущий кусок пасса-2: {from, to, spk}
   let pending = "";          // что печатается сейчас
   let typed = 0;
   let marks = [];            // узлы уже поставленной корректуры — их не трогаем
@@ -128,19 +134,21 @@ export function textScene(root) {
       else more = true;
       toEnd();
     }
-    if (jobs.length && now >= busy) { runFix(jobs.shift(), now); more = true; }
+    if (jobs.length && now >= busy) { runJob(jobs.shift(), now); more = true; }
     if (jobs.length) more = true;
     if (more) pump();
   }
 
   // --- текст пишется ---------------------------------------------------------------------
 
-  function append(sec, raw) {
+  function append(sec, raw, { draft = false, to = 0 } = {}) {
     // ⚠️ Прежний кусок дописываем ЦЕЛИКОМ, а не по напечатанному: иначе при быстром потоке
     // (или перемотке на стенде) каждый новый кусок обрезал бы предыдущий на полуслове, и от
     // текста оставались бы огрызки. Печать — это скорость показа, а не содержимое.
     finishTyping();
-    const piece = el("span", { class: "tx-piece" });
+    const piece = el("span", { class: draft ? "tx-piece tx-draft" : "tx-piece" });
+    piece.at = sec;                       // окно куска: по нему чистовик находит свой черновик
+    piece.till = to || sec;
     body.append(piece);
     anchors.push([sec, piece]);
     tail = piece;
@@ -148,6 +156,33 @@ export function textScene(root) {
     typed = 0;
     toEnd();          // кусок уже в разметке — показываем конец сразу, а не со следующего кадра
     pump();
+    return piece;
+  }
+
+  /** Имя или метка голоса для подписи. */
+  function who(spk) {
+    return named[spk] || spk;
+  }
+
+  /** Метка говорящего перед куском.
+   *
+   * ⚠️ Смена голоса есть ТОЛЬКО в `chunk.start.spk`: ни в `chunk.done`, ни в событиях
+   * финал-раунда говорящего нет вовсе (реплики получают имя позже, уже внутри движка). Поэтому
+   * метки расставляет пасс-2, и дальше они просто остаются в тексте.
+   * ⚠️ Метка БЛОЧНАЯ — сама переносит строку. Перестраивать уже разложенный черновик в абзацы
+   * задним числом нельзя: он лежит сплошным потоком, и перекладка сбила бы прокрутку.
+   */
+  function badge(spk, before) {
+    if (!spk || spk === lastSpk) return null;
+    lastSpk = spk;
+    const idx = Math.max(0, speakers.indexOf(spk));
+    const mark = el("span", { class: "tx-who" },
+      el("i", { style: `background:${colour(idx)}` }), who(spk));
+    mark.spk = spk;
+    badges.push(mark);
+    if (before && before.parentElement) before.parentElement.insertBefore(mark, before);
+    else body.append(mark);
+    return mark;
   }
 
   // --- текст правится --------------------------------------------------------------------
@@ -187,6 +222,59 @@ export function textScene(root) {
     if (!pending) return;
     if (tail) tail.textContent = pending;
     pending = ""; typed = 0; tail = null;
+  }
+
+  /** Черновой кусок, накрывающий эту секунду: в него встанет чистовик.
+   *
+   * ⚠️ Забираем кусок СРАЗУ (`taken`), а не в момент подмены: между постановкой в очередь и
+   * заменой проходит доля секунды, и соседний чанк успел бы выбрать тот же черновик.
+   */
+  /** Остались ли непотраченные черновые куски. */
+  function drafts() {
+    for (const node of body.children) if (node.classList.contains("tx-draft") && !node.taken) return true;
+    return false;
+  }
+
+  function draftAt(sec) {
+    for (const node of body.children) {
+      if (!node.classList.contains("tx-draft") || node.taken) continue;
+      if (sec + 0.5 >= (node.at || 0) && sec - 0.5 <= (node.till || 0)) { node.taken = true; return node; }
+    }
+    return null;
+  }
+
+  function runJob(job, now) {
+    if (job.t === "chunk") runChunk(job, now);
+    else runFix(job, now);
+  }
+
+  /** Чистовой кусок пасса-2 ВСТАЁТ НА МЕСТО чернового (решение владельца 24.09).
+   *
+   * Так виден смысл второго прохода: текст записи лежит целиком уже после пасса-1, а пасс-2
+   * проходит по нему и уточняет кусок за куском. Подсветка — та же единственная, что у правок.
+   */
+  function runChunk(job, now) {
+    finishTyping();
+    const { hold, gap } = pace(jobs.length);
+    const spot = draftAt(job.from);
+    if (!spot) {                       // черновика нет (окно открыли позже) — просто дописываем
+      badge(job.spk, null);
+      append(job.from, job.raw, { to: job.to });
+      busy = now + gap;
+      return;
+    }
+    badge(job.spk, spot);
+    spot.classList.add("tx-hit");
+    follow(spot);
+    busy = now + hold + gap;
+    const land = () => {
+      spot.classList.remove("tx-hit");
+      spot.classList.remove("tx-draft");
+      spot.textContent = `${(job.raw || "").trim()} `;
+      spot.at = job.from;
+      spot.till = job.to;
+    };
+    if (reduced()) land(); else setTimeout(land, hold);
   }
 
   function runFix(e, now) {
@@ -259,14 +347,43 @@ export function textScene(root) {
 
   return {
     apply(e) {
+      if (e.t === "diar.spans") { speakers = e.speakers || []; return; }
+      // ⚠️ Черновик приходит ПАЧКОЙ в конце пасса-1 (whisper слушает файл одним вызовом),
+      // и это не недоработка показа, а устройство модели. Зато уже к третьей минуте в окне лежит
+      // весь текст записи, и дальше он на глазах уточняется.
+      if (e.t === "stage.start" && e.stage === "pass1") {
+        root.removeAttribute("hidden");
+        mode = "draft";
+        head.textContent = "слушаю целиком — черновик";
+        return;
+      }
+      if (e.t === "draft.window") {
+        root.removeAttribute("hidden");
+        if (mode === "idle") mode = "draft";
+        append(e.from || 0, e.text || "", { draft: true, to: e.to || 0 });
+        return;
+      }
       if (e.t === "stage.start" && e.stage === "pass2") {
         root.removeAttribute("hidden");
         mode = "writing";
-        head.textContent = "распознаю — текст появляется по мере готовности";
+        head.textContent = body.children.length
+          ? "распознаю по кускам — чистовик встаёт на место черновика"
+          : "распознаю — текст появляется по мере готовности";
         return;
       }
-      if (e.t === "chunk.start") { current = e.from || current; return; }
-      if (e.t === "chunk.done" && mode === "writing" && e.raw) { append(current, e.raw); return; }
+      if (e.t === "chunk.start") {
+        current = e.from ?? current;
+        chunk = { from: e.from ?? current, to: e.to ?? current, spk: e.spk || "" };
+        return;
+      }
+      if (e.t === "chunk.done" && mode === "writing" && e.raw) {
+        const job = { t: "chunk", raw: e.raw, ...(chunk || { from: current, to: current, spk: "" }) };
+        // ⚠️ Через очередь идёт только ЗАМЕНА черновика: её надо успеть увидеть. Когда
+        // черновика нет (окно открыли позже), кусок просто дописывается СРАЗУ — тормозить
+        // появление текста ради темпа незачем.
+        if (drafts()) { jobs.push(job); pump(); } else { runChunk(job, performance.now()); }
+        return;
+      }
       if (e.t === "stage.start" && e.stage === "final-round") {
         root.removeAttribute("hidden");
         mode = "fixing";
@@ -281,16 +398,27 @@ export function textScene(root) {
         return;
       }
       if (e.t === "turn.fix") { jobs.push(e); pump(); return; }
-      if (e.t === "turn.done") { turns = e.n || turns; summary(); }
+      if (e.t === "turn.done") { turns = e.n || turns; summary(); return; }
+      // Имена узнал сайт — подписи переписываются НА МЕСТЕ, без пересборки текста.
+      if (e.t === "voices.named") {
+        named = {};
+        for (const [label, v] of Object.entries(e.by_label || {})) named[label] = v.name || label;
+        for (const mark of badges) {
+          const dot = mark.children && mark.children[0];
+          mark.textContent = who(mark.spk);
+          if (dot) mark.prepend(dot);
+        }
+      }
     },
     reset() {
       mode = "idle"; pending = ""; typed = 0; tail = null; jobs.length = 0; busy = 0;
+      speakers = []; named = {}; badges = []; lastSpk = null; chunk = null;
       applied = dropped = turns = current = 0;
       marks = []; anchors = [];
       head.textContent = ""; body.replaceChildren(); count.textContent = "";
       root.setAttribute("hidden", "");
     },
-    state: () => ({ mode, applied, dropped, turns, text: body.textContent,
+    state: () => ({ mode, applied, dropped, turns, text: body.textContent, speakers: badges.length,
                     edits: marks.length, queued: jobs.length }),
   };
 }

@@ -80,6 +80,14 @@ button.icon{background:none;border:1px solid var(--line);color:var(--ink-dim);pa
          height:clamp(260px,52vh,560px);overflow-y:auto;overflow-x:hidden;
          background:var(--surface-2);border-radius:12px;padding:16px 18px}
 .tx-piece{display:inline}
+/* Черновик пасса-1 — приглушённый: видно, что этот кусок ещё будет уточнён. Чистовик
+   встаёт на его место и пометка снимается — весь смысл второго прохода виден глазом. */
+.tx-draft{color:var(--ink-dim)}
+/* Метка говорящего: блочная, поэтому сама начинает строку. Цвет точки — тот же, что у
+   голоса в ленте волны (общий модуль `voices.js`). */
+.tx-who{display:block;margin:.85em 0 .1em;font:11px/1.5 var(--mono);color:var(--ink-dim);
+        letter-spacing:.04em}
+.tx-who i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 
 /* ⚠️ ПОДСВЕТКА ОДНА на всю сцену: жёлтым отмечено то, над чем работают прямо сейчас. Разные
    анимации на разные случаи читаются как рябь — глаз ищет правило и не находит.

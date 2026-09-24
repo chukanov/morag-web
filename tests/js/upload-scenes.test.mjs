@@ -60,6 +60,12 @@ class El {
     }
   }
   prepend(k) { if (k instanceof El) k.parentElement = this; this.kids.unshift(k); }
+  insertBefore(node, before) {
+    const at = this.kids.indexOf(before);
+    node.parentElement = this;
+    this.kids.splice(at < 0 ? this.kids.length : at, 0, node);
+    return node;
+  }
   replaceChildren(...kids) { this.kids = []; this.append(...kids); }
   // ⚠️ Узел обязан уходить У РОДИТЕЛЯ: без этого обрезка списка («пока карточек больше сорока —
   // удаляй последнюю») превращается в бесконечный цикл, и тест просто виснет.
@@ -224,6 +230,36 @@ const { textScene } = await import(join(repo, "tools/ui/text.js"));
   scene.apply({ t: "turn.done", turn: 0, start: 61, n: 5, changed: true });
   assert.equal(scene.state().turns, 5);
 }
+{
+  // ⚠️ Черновик пасса-1 ложится в окно ЦЕЛИКОМ, а чистовик пасса-2 ВСТАЁТ НА ЕГО МЕСТО
+  // (решение владельца 24.09): второй проход виден глазом, а не догадкой.
+  const root = new El("div");
+  const scene = textScene(root);
+  scene.apply({ t: "diar.spans", speakers: ["SPEAKER_00", "SPEAKER_01"], spans: [] });
+  scene.apply({ t: "stage.start", stage: "pass1" });
+  scene.apply({ t: "draft.window", from: 0, to: 30, text: "мы берём эйр флоу и ставим", bulk: true });
+  scene.apply({ t: "draft.window", from: 30, to: 60, text: "потом всё в кафка", bulk: true });
+  flush();
+  assert.equal(scene.state().mode, "draft");
+  assert.match(scene.state().text, /эйр флоу/, "черновик виден сразу после пасса-1");
+
+  scene.apply({ t: "stage.start", stage: "pass2" });
+  scene.apply({ t: "chunk.start", i: 1, n: 2, from: 0, to: 30, spk: "SPEAKER_00" });
+  scene.apply({ t: "chunk.done", i: 1, raw: "Мы берём Airflow и ставим его в работу." });
+  flush();
+  const after = scene.state().text;
+  assert.match(after, /Airflow/, "чистовик встал на место");
+  assert.ok(!after.includes("эйр флоу"), "черновой текст этого куска заменён, а не дописан");
+  assert.match(after, /всё в кафка/, "соседнее окно не тронуто");
+  assert.equal(scene.state().speakers, 1, "смена голоса отмечена меткой");
+  assert.match(after, /SPEAKER_00/, "и метка подписана");
+
+  // Имена пришли с сайта — подписи переписываются на месте, без пересборки текста.
+  scene.apply({ t: "voices.named", by_label: { SPEAKER_00: { voice: "Speaker_7", name: "Мария Кузнецова" } } });
+  assert.match(scene.state().text, /Мария Кузнецова/, "имя встало вместо метки");
+  assert.ok(!scene.state().text.includes("SPEAKER_00"), "а метки больше нет");
+}
+
 {
   // ⚠️ Слежение за правкой не должно выключаться НАШЕЙ же прокруткой. `scrollTop = …`
   // поднимает событие `scroll`, и пока сцена считала его человеческим, она после первой же замены
